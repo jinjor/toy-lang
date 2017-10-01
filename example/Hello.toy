@@ -1,0 +1,14 @@
+a : Number
+a = 1
+
+b = a
+
+c = b
+
+d = 2
+d = 3
+
+e : Number
+e : String
+
+f = g

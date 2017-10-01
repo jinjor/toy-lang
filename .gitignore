@@ -1,0 +1,15 @@
+
+# elm
+elm-stuff
+
+
+# generated
+dest
+
+
+# node
+node_modules
+
+
+# testing
+.toy

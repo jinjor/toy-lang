@@ -1,0 +1,9 @@
+#!/bin/sh
+
+file="commands/${1}.js"
+
+if [ ! -e $file ]; then
+  file=commands/default
+fi
+
+node $file ${@:2}

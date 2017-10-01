@@ -1,0 +1,9 @@
+{
+  "name": "toy-lang",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "argv": "^0.0.2"
+  }
+}
