@@ -12,3 +12,7 @@ e : Number
 e : String
 
 f = g
+
+h : Number -> String
+
+i = h

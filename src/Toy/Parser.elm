@@ -22,11 +22,15 @@ type alias Positioned a =
 
 type Statement
     = Assignment Identifier (Positioned Expression)
-    | TypeSignature Identifier TypeName
+    | TypeSignature Identifier TypeNames
 
 
 type alias Identifier =
     String
+
+
+type TypeNames
+    = TypeNames TypeName (Maybe TypeNames)
 
 
 type alias TypeName =
@@ -87,10 +91,25 @@ statement =
 typeSignature : Parser (Identifier -> Statement)
 typeSignature =
     inContext "type signature" <|
-        succeed (\typeName id -> TypeSignature id typeName)
+        succeed (\typeNames id -> TypeSignature id typeNames)
             |. symbol ":"
             |. spaces
+            |= typeNames
+
+
+typeNames : Parser TypeNames
+typeNames =
+    inContext "type names" <|
+        succeed TypeNames
             |= typeName
+            |. spaces
+            |= oneOf
+                [ succeed Just
+                    |. symbol "->"
+                    |. spaces
+                    |= lazy (\_ -> typeNames)
+                , succeed Nothing
+                ]
 
 
 typeName : Parser TypeName

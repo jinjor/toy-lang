@@ -6,7 +6,7 @@ import Dict exposing (Dict)
 
 type alias Variable =
     { id : Identifier
-    , type_ : Maybe ( TypeName, Bool )
+    , type_ : Maybe ( TypeNames, Bool )
     , exp : Maybe (Positioned Expression)
     , error : Maybe String
     }
@@ -29,8 +29,38 @@ check module_ =
             collectErrors typed
                 |> List.map (formatError "")
                 |> List.map (Debug.log "error")
+
+        interfaces =
+            typed
+                |> Dict.values
+                |> List.map formatInterface
+                |> List.map (Debug.log "type")
     in
         typed
+
+
+formatInterface : Variable -> String
+formatInterface v =
+    let
+        typeString =
+            case v.type_ of
+                Just ( t, _ ) ->
+                    formatType t
+
+                Nothing ->
+                    "?"
+    in
+        v.id ++ " : " ++ typeString
+
+
+formatType : TypeNames -> String
+formatType (TypeNames head tail) =
+    case tail of
+        Just t ->
+            head ++ " -> " ++ formatType t
+
+        Nothing ->
+            head
 
 
 formatError : String -> Positioned String -> String
@@ -82,16 +112,16 @@ addTypeUntilEnd dict =
                                 }
                             |> addTypeUntilEnd
 
-                    Ok ( typeName, newDict ) ->
+                    Ok ( typeNames, newDict ) ->
                         newDict
-                            |> Dict.insert v.id { v | type_ = Just ( typeName, True ) }
+                            |> Dict.insert v.id { v | type_ = Just ( typeNames, True ) }
                             |> addTypeUntilEnd
 
             _ ->
                 dict
 
 
-lookupType : Variables -> Identifier -> Result String ( TypeName, Variables )
+lookupType : Variables -> Identifier -> Result String ( TypeNames, Variables )
 lookupType dict id =
     case Dict.get id dict of
         Nothing ->
@@ -102,31 +132,39 @@ lookupType dict id =
                 ( Nothing, Just exp ) ->
                     case exp.content of
                         NumberLiteral s ->
-                            Ok
-                                ( "Number"
-                                , dict
-                                    |> Dict.insert v.id { v | type_ = Just ( "Number", True ) }
-                                )
+                            let
+                                type_ =
+                                    TypeNames "Number" Nothing
+                            in
+                                Ok
+                                    ( type_
+                                    , dict
+                                        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
+                                    )
 
                         StringLiteral s ->
-                            Ok
-                                ( "String"
-                                , dict
-                                    |> Dict.insert v.id { v | type_ = Just ( "String", True ) }
-                                )
+                            let
+                                type_ =
+                                    TypeNames "String" Nothing
+                            in
+                                Ok
+                                    ( type_
+                                    , dict
+                                        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
+                                    )
 
                         Ref id ->
                             lookupType dict id
                                 |> Result.map
-                                    (\( typeName, newDict ) ->
-                                        ( typeName
+                                    (\( typeNames, newDict ) ->
+                                        ( typeNames
                                         , dict
-                                            |> Dict.insert v.id { v | type_ = Just ( typeName, True ) }
+                                            |> Dict.insert v.id { v | type_ = Just ( typeNames, True ) }
                                         )
                                     )
 
-                ( Just ( typeName, _ ), _ ) ->
-                    Ok ( typeName, dict )
+                ( Just ( typeNames, _ ), _ ) ->
+                    Ok ( typeNames, dict )
 
                 ( Nothing, Nothing ) ->
                     Debug.crash "arienai"
@@ -141,8 +179,8 @@ makeVariables (Module statements) =
                     Assignment id exp ->
                         updateByAssignment id exp dict
 
-                    TypeSignature id typeName ->
-                        updateByTypeSignature id typeName dict
+                    TypeSignature id typeNames ->
+                        updateByTypeSignature id typeNames dict
             )
             Dict.empty
 
@@ -170,20 +208,20 @@ updateByAssignment id exp dict =
 
 updateByTypeSignature :
     Identifier
-    -> TypeName
+    -> TypeNames
     -> Variables
     -> Variables
-updateByTypeSignature id typeName dict =
+updateByTypeSignature id typeNames dict =
     dict
         |> Dict.update id
             (\maybeVar ->
                 case maybeVar of
                     Just old ->
                         if old.type_ == Nothing then
-                            Just <| { old | type_ = Just ( typeName, False ) }
+                            Just <| { old | type_ = Just ( typeNames, False ) }
                         else
                             Just <| { old | error = Just (id ++ " is already typed.") }
 
                     Nothing ->
-                        Just <| Variable id (Just ( typeName, False )) Nothing Nothing
+                        Just <| Variable id (Just ( typeNames, False )) Nothing Nothing
             )

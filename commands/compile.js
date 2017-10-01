@@ -8,8 +8,8 @@ const parser = Elm.Compile.worker();
 let start = Date.now();
 parser.ports.parse.send(source);
 parser.ports.parsed.subscribe(mes => {
-  console.log(mes);
-  console.error('took ' + (Date.now() - start) + '[ms] to parse');
+  console.error(mes);
+  console.log('took ' + (Date.now() - start) + '[ms] to parse');
   start = Date.now();
   if (!fs.existsSync('./.toy')) {
     fs.mkdirSync('./.toy');
@@ -19,8 +19,8 @@ parser.ports.parsed.subscribe(mes => {
   fs.writeFileSync(file, mes);
 });
 parser.ports.checked.subscribe(mes => {
-  console.log(mes);
-  console.error('took ' + (Date.now() - start) + '[ms] to check');
+  console.error(mes);
+  console.log('took ' + (Date.now() - start) + '[ms] to check');
   if (!fs.existsSync('./.toy')) {
     fs.mkdirSync('./.toy');
   }
@@ -29,6 +29,7 @@ parser.ports.checked.subscribe(mes => {
   fs.writeFileSync(file, mes);
 });
 parser.ports.err.subscribe(mes => {
-  console.error(mes);
+  console.log('error!');
+  console.log(mes);
   process.exit(1);
 });
