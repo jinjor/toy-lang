@@ -153,7 +153,7 @@ lookupType dict id =
                                         |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
                                     )
 
-                        Ref id ->
+                        Ref id _ ->
                             lookupType dict id
                                 |> Result.map
                                     (\( typeNames, newDict ) ->

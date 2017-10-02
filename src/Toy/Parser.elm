@@ -40,7 +40,7 @@ type alias TypeName =
 type Expression
     = NumberLiteral String
     | StringLiteral String
-    | Ref Identifier
+    | Ref Identifier (List (Positioned Expression))
 
 
 module_ : Parser Module
@@ -140,17 +140,32 @@ identifier =
 expression : Parser (Positioned Expression)
 expression =
     inContext "expression" <|
-        positioned <|
-            oneOf
-                [ ref
-                , number
-                ]
+        oneOf
+            [ lazy (\_ -> ref)
+            , positioned number
+            ]
 
 
-ref : Parser Expression
+ref : Parser (Positioned Expression)
 ref =
     inContext "ref" <|
-        map Ref identifier
+        positioned <|
+            succeed Ref
+                |= identifier
+                |. spaces
+                |= lazy (\_ -> functionTail)
+
+
+functionTail : Parser (List (Positioned Expression))
+functionTail =
+    inContext "function tail" <|
+        oneOf
+            [ succeed (::)
+                |= lazy (\_ -> expression)
+                |. spaces
+                |= lazy (\_ -> functionTail)
+            , succeed []
+            ]
 
 
 number : Parser Expression
