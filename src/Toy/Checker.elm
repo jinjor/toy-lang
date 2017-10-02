@@ -103,7 +103,7 @@ addTypeUntilEnd dict =
     in
         case target of
             Just v ->
-                case lookupType dict v.id of
+                case lookupType dict v.id [] of
                     Err e ->
                         dict
                             |> Dict.insert v.id
@@ -121,53 +121,66 @@ addTypeUntilEnd dict =
                 dict
 
 
-lookupType : Variables -> Identifier -> Result String ( TypeNames, Variables )
-lookupType dict id =
+lookupType : Variables -> Identifier -> List (Positioned Expression) -> Result String ( TypeNames, Variables )
+lookupType dict id tail =
     case Dict.get id dict of
         Nothing ->
             Err (id ++ " is not defined")
 
         Just v ->
-            case ( v.type_, v.exp ) of
-                ( Nothing, Just exp ) ->
-                    case exp.content of
-                        NumberLiteral s ->
-                            let
-                                type_ =
-                                    TypeNames "Number" Nothing
-                            in
-                                Ok
-                                    ( type_
-                                    , dict
-                                        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
-                                    )
+            let
+                result =
+                    case ( v.type_, v.exp ) of
+                        ( Nothing, Just exp ) ->
+                            lookupTypeForExpression dict v exp.content
 
-                        StringLiteral s ->
-                            let
-                                type_ =
-                                    TypeNames "String" Nothing
-                            in
-                                Ok
-                                    ( type_
-                                    , dict
-                                        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
-                                    )
+                        ( Just ( type_, _ ), _ ) ->
+                            Ok ( type_, dict )
 
-                        Ref id _ ->
-                            lookupType dict id
-                                |> Result.map
-                                    (\( typeNames, newDict ) ->
-                                        ( typeNames
-                                        , dict
-                                            |> Dict.insert v.id { v | type_ = Just ( typeNames, True ) }
-                                        )
-                                    )
+                        ( Nothing, Nothing ) ->
+                            Debug.crash "arienai"
+            in
+                result
+                    |> Result.map
+                        (\( type_, newDict ) ->
+                            case tail of
+                                [] ->
+                                    ( type_, newDict )
 
-                ( Just ( typeNames, _ ), _ ) ->
-                    Ok ( typeNames, dict )
+                                head :: tail ->
+                                    Debug.crash "not implemented yet"
+                        )
 
-                ( Nothing, Nothing ) ->
-                    Debug.crash "arienai"
+
+lookupTypeForExpression : Variables -> Variable -> Expression -> Result String ( TypeNames, Variables )
+lookupTypeForExpression dict v exp =
+    case exp of
+        NumberLiteral s ->
+            let
+                type_ =
+                    TypeNames "Number" Nothing
+            in
+                Ok ( type_, addCheckedType v type_ dict )
+
+        StringLiteral s ->
+            let
+                type_ =
+                    TypeNames "String" Nothing
+            in
+                Ok ( type_, addCheckedType v type_ dict )
+
+        Ref id tail ->
+            lookupType dict id tail
+                |> Result.map
+                    (\( type_, newDict ) ->
+                        ( type_, addCheckedType v type_ newDict )
+                    )
+
+
+addCheckedType : Variable -> TypeNames -> Variables -> Variables
+addCheckedType v type_ dict =
+    dict
+        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
 
 
 makeVariables : Module -> Variables

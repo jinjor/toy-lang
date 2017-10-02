@@ -15,6 +15,4 @@ f = g
 
 h : Number -> String
 
-i = h
-
-j = h 1 2 a
+i = h 1
