@@ -22,7 +22,7 @@ type alias Pos a =
 
 type Statement
     = Assignment Identifier (Pos Expression)
-    | TypeSignature Identifier TypeExp
+    | TypeSignature Identifier (Pos TypeExp)
 
 
 type alias Identifier =
@@ -91,7 +91,7 @@ typeSignature =
         succeed (\typeExp id -> TypeSignature id typeExp)
             |. symbol ":"
             |. spaces
-            |= typeExp
+            |= positioned typeExp
 
 
 typeExp : Parser TypeExp

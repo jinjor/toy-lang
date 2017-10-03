@@ -8,12 +8,22 @@ type alias Variable =
     { id : Identifier
     , type_ : Maybe ( TypeExp, Bool )
     , exp : Maybe (Pos Expression)
-    , error : Maybe String
+    , errors : List Error
     }
 
 
 type alias Variables =
     Dict Identifier Variable
+
+
+type alias Range =
+    { start : ( Int, Int )
+    , end : ( Int, Int )
+    }
+
+
+type alias Error =
+    ( Range, String )
 
 
 check : Module -> Variables
@@ -68,33 +78,20 @@ formatType type_ =
             name
 
 
-formatError : String -> Pos String -> String
-formatError source e =
-    toString (Tuple.first e.start)
+formatError : String -> ( Range, String ) -> String
+formatError source ( range, e ) =
+    toString (Tuple.first range.start)
         ++ ":"
-        ++ toString (Tuple.second e.start)
+        ++ toString (Tuple.second range.start)
         ++ " "
-        ++ e.content
+        ++ e
 
 
-collectErrors : Variables -> List (Pos String)
+collectErrors : Variables -> List ( Range, String )
 collectErrors typedDict =
     typedDict
         |> Dict.values
-        |> List.filterMap collectError
-
-
-collectError : Variable -> Maybe (Pos String)
-collectError v =
-    case ( v.exp, v.error ) of
-        ( Just exp, Just e ) ->
-            Just (Pos exp.start exp.end e)
-
-        ( Nothing, Just e ) ->
-            Just (Pos ( -1, -1 ) ( -1, -1 ) e)
-
-        _ ->
-            Nothing
+        |> List.concatMap .errors
 
 
 addTypeUntilEnd : Variables -> Variables
@@ -102,7 +99,7 @@ addTypeUntilEnd dict =
     let
         target =
             dict
-                |> Dict.filter (\key v -> v.type_ == Nothing && v.error == Nothing)
+                |> Dict.filter (\key v -> v.type_ == Nothing && v.errors == [])
                 |> Dict.values
                 |> List.head
     in
@@ -112,9 +109,7 @@ addTypeUntilEnd dict =
                     Err e ->
                         dict
                             |> Dict.insert v.id
-                                { v
-                                    | error = Just e
-                                }
+                                { v | errors = ( Range ( -1, -1 ) ( -1, 1 ), e ) :: v.errors }
                             |> addTypeUntilEnd
 
                     Ok ( typeExp, newDict ) ->
@@ -177,7 +172,7 @@ lookupTypeForExpressions dict v type_ tail =
 
 makeLocalVariableMock : Pos Expression -> Variable
 makeLocalVariableMock exp =
-    Variable "__local__" Nothing (Just exp) Nothing
+    Variable "__local__" Nothing (Just exp) []
 
 
 applyType : TypeExp -> TypeExp -> Result String TypeExp
@@ -258,16 +253,16 @@ updateByAssignment id exp dict =
                         if old.exp == Nothing then
                             Just <| { old | exp = Just exp }
                         else
-                            Just <| { old | error = Just (id ++ " is already defined.") }
+                            Just <| { old | errors = ( Range exp.start exp.end, id ++ " is already defined." ) :: old.errors }
 
                     Nothing ->
-                        Just <| Variable id Nothing (Just exp) Nothing
+                        Just <| Variable id Nothing (Just exp) []
             )
 
 
 updateByTypeSignature :
     Identifier
-    -> TypeExp
+    -> Pos TypeExp
     -> Variables
     -> Variables
 updateByTypeSignature id typeExp dict =
@@ -277,10 +272,10 @@ updateByTypeSignature id typeExp dict =
                 case maybeVar of
                     Just old ->
                         if old.type_ == Nothing then
-                            Just <| { old | type_ = Just ( typeExp, False ) }
+                            Just <| { old | type_ = Just ( typeExp.content, False ) }
                         else
-                            Just <| { old | error = Just (id ++ " is already typed.") }
+                            Just <| { old | errors = ( Range typeExp.start typeExp.end, id ++ " is already defined." ) :: old.errors }
 
                     Nothing ->
-                        Just <| Variable id (Just ( typeExp, False )) Nothing Nothing
+                        Just <| Variable id (Just ( typeExp.content, False )) Nothing []
             )
