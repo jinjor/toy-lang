@@ -22,19 +22,16 @@ type alias Positioned a =
 
 type Statement
     = Assignment Identifier (Positioned Expression)
-    | TypeSignature Identifier TypeNames
+    | TypeSignature Identifier TypeExp
 
 
 type alias Identifier =
     String
 
 
-type TypeNames
-    = TypeNames TypeName (Maybe TypeNames)
-
-
-type alias TypeName =
-    String
+type TypeExp
+    = ArrowType TypeExp (Maybe TypeExp)
+    | AtomType String
 
 
 type Expression
@@ -91,28 +88,40 @@ statement =
 typeSignature : Parser (Identifier -> Statement)
 typeSignature =
     inContext "type signature" <|
-        succeed (\typeNames id -> TypeSignature id typeNames)
+        succeed (\typeExp id -> TypeSignature id typeExp)
             |. symbol ":"
             |. spaces
-            |= typeNames
+            |= typeExp
 
 
-typeNames : Parser TypeNames
-typeNames =
+typeExp : Parser TypeExp
+typeExp =
     inContext "type names" <|
-        succeed TypeNames
-            |= typeName
-            |. spaces
-            |= oneOf
-                [ succeed Just
-                    |. symbol "->"
-                    |. spaces
-                    |= lazy (\_ -> typeNames)
-                , succeed Nothing
-                ]
+        (oneOf
+            [ succeed identity
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> typeExp)
+                |. spaces
+                |. symbol ")"
+            , map AtomType typeName
+            ]
+            |> andThen
+                (\head ->
+                    succeed (ArrowType head)
+                        |. spaces
+                        |= oneOf
+                            [ succeed Just
+                                |. symbol "->"
+                                |. spaces
+                                |= lazy (\_ -> typeExp)
+                            , succeed Nothing
+                            ]
+                )
+        )
 
 
-typeName : Parser TypeName
+typeName : Parser String
 typeName =
     inContext "type name" <|
         source <|

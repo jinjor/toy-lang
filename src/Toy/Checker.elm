@@ -6,7 +6,7 @@ import Dict exposing (Dict)
 
 type alias Variable =
     { id : Identifier
-    , type_ : Maybe ( TypeNames, Bool )
+    , type_ : Maybe ( TypeExp, Bool )
     , exp : Maybe (Positioned Expression)
     , error : Maybe String
     }
@@ -53,14 +53,19 @@ formatInterface v =
         v.id ++ " : " ++ typeString
 
 
-formatType : TypeNames -> String
-formatType (TypeNames head tail) =
-    case tail of
-        Just t ->
-            head ++ " -> " ++ formatType t
+formatType : TypeExp -> String
+formatType type_ =
+    case type_ of
+        ArrowType head tail ->
+            case tail of
+                Just t ->
+                    formatType head ++ " -> " ++ formatType t
 
-        Nothing ->
-            head
+                Nothing ->
+                    formatType head
+
+        AtomType name ->
+            name
 
 
 formatError : String -> Positioned String -> String
@@ -112,16 +117,16 @@ addTypeUntilEnd dict =
                                 }
                             |> addTypeUntilEnd
 
-                    Ok ( typeNames, newDict ) ->
+                    Ok ( typeExp, newDict ) ->
                         newDict
-                            |> Dict.insert v.id { v | type_ = Just ( typeNames, True ) }
+                            |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
                             |> addTypeUntilEnd
 
             _ ->
                 dict
 
 
-lookupType : Variables -> Identifier -> List (Positioned Expression) -> Result String ( TypeNames, Variables )
+lookupType : Variables -> Identifier -> List (Positioned Expression) -> Result String ( TypeExp, Variables )
 lookupType dict id tail =
     case Dict.get id dict of
         Nothing ->
@@ -150,9 +155,9 @@ lookupType dict id tail =
 lookupTypeForExpressions :
     Variables
     -> Variable
-    -> TypeNames
+    -> TypeExp
     -> List (Positioned Expression)
-    -> Result String ( TypeNames, Variables )
+    -> Result String ( TypeExp, Variables )
 lookupTypeForExpressions dict v type_ tail =
     case tail of
         [] ->
@@ -175,30 +180,38 @@ makeLocalVariableMock exp =
     Variable "__local__" Nothing (Just exp) Nothing
 
 
-applyType : TypeNames -> TypeNames -> Result String TypeNames
-applyType (TypeNames t1 tail) t2 =
-    case tail of
-        Just t ->
-            Ok t
+applyType : TypeExp -> TypeExp -> Result String TypeExp
+applyType t1 t2 =
+    case t1 of
+        ArrowType head tail ->
+            case tail of
+                Just t ->
+                    if head == t2 then
+                        Ok t
+                    else
+                        Err "type mismatch"
 
-        Nothing ->
+                Nothing ->
+                    Err "too many arguments"
+
+        AtomType name ->
             Err "too many arguments"
 
 
-lookupTypeForExpression : Variables -> Variable -> Expression -> Result String ( TypeNames, Variables )
+lookupTypeForExpression : Variables -> Variable -> Expression -> Result String ( TypeExp, Variables )
 lookupTypeForExpression dict v exp =
     case exp of
         NumberLiteral s ->
             let
                 type_ =
-                    TypeNames "Number" Nothing
+                    AtomType "Number"
             in
                 Ok ( type_, addCheckedType v type_ dict )
 
         StringLiteral s ->
             let
                 type_ =
-                    TypeNames "String" Nothing
+                    AtomType "String"
             in
                 Ok ( type_, addCheckedType v type_ dict )
 
@@ -210,7 +223,7 @@ lookupTypeForExpression dict v exp =
                     )
 
 
-addCheckedType : Variable -> TypeNames -> Variables -> Variables
+addCheckedType : Variable -> TypeExp -> Variables -> Variables
 addCheckedType v type_ dict =
     dict
         |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
@@ -225,8 +238,8 @@ makeVariables (Module statements) =
                     Assignment id exp ->
                         updateByAssignment id exp dict
 
-                    TypeSignature id typeNames ->
-                        updateByTypeSignature id typeNames dict
+                    TypeSignature id typeExp ->
+                        updateByTypeSignature id typeExp dict
             )
             Dict.empty
 
@@ -254,20 +267,20 @@ updateByAssignment id exp dict =
 
 updateByTypeSignature :
     Identifier
-    -> TypeNames
+    -> TypeExp
     -> Variables
     -> Variables
-updateByTypeSignature id typeNames dict =
+updateByTypeSignature id typeExp dict =
     dict
         |> Dict.update id
             (\maybeVar ->
                 case maybeVar of
                     Just old ->
                         if old.type_ == Nothing then
-                            Just <| { old | type_ = Just ( typeNames, False ) }
+                            Just <| { old | type_ = Just ( typeExp, False ) }
                         else
                             Just <| { old | error = Just (id ++ " is already typed.") }
 
                     Nothing ->
-                        Just <| Variable id (Just ( typeNames, False )) Nothing Nothing
+                        Just <| Variable id (Just ( typeExp, False )) Nothing Nothing
             )

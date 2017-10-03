@@ -13,6 +13,6 @@ e : String
 
 f = g
 
-h : Number -> String
+h : Number -> String -> Number
 
 i = h 1
