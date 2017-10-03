@@ -6,14 +6,14 @@ import Parser.LowLevel exposing (..)
 
 
 type Module
-    = Module (List (Positioned Statement))
+    = Module (List (Pos Statement))
 
 
 type alias Position =
     ( Int, Int )
 
 
-type alias Positioned a =
+type alias Pos a =
     { start : Position
     , end : Position
     , content : a
@@ -21,7 +21,7 @@ type alias Positioned a =
 
 
 type Statement
-    = Assignment Identifier (Positioned Expression)
+    = Assignment Identifier (Pos Expression)
     | TypeSignature Identifier TypeExp
 
 
@@ -37,7 +37,7 @@ type TypeExp
 type Expression
     = NumberLiteral String
     | StringLiteral String
-    | Ref Identifier (List (Positioned Expression))
+    | Ref Identifier (List (Pos Expression))
 
 
 module_ : Parser Module
@@ -47,7 +47,7 @@ module_ =
             |= statements ""
 
 
-statements : String -> Parser (List (Positioned Statement))
+statements : String -> Parser (List (Pos Statement))
 statements indent =
     inContext "statements" <|
         succeed identity
@@ -72,7 +72,7 @@ emptyLine =
         |. symbol "\n"
 
 
-statement : Parser (Positioned Statement)
+statement : Parser (Pos Statement)
 statement =
     inContext "statement" <|
         positioned <|
@@ -96,7 +96,7 @@ typeSignature =
 
 typeExp : Parser TypeExp
 typeExp =
-    inContext "type names" <|
+    inContext "type expression" <|
         (oneOf
             [ succeed identity
                 |. symbol "("
@@ -146,7 +146,7 @@ identifier =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-expression : Parser (Positioned Expression)
+expression : Parser (Pos Expression)
 expression =
     inContext "expression" <|
         oneOf
@@ -155,7 +155,7 @@ expression =
             ]
 
 
-ref : Parser (Positioned Expression)
+ref : Parser (Pos Expression)
 ref =
     inContext "ref" <|
         positioned <|
@@ -165,7 +165,7 @@ ref =
                 |= lazy (\_ -> functionTail)
 
 
-functionTail : Parser (List (Positioned Expression))
+functionTail : Parser (List (Pos Expression))
 functionTail =
     inContext "function tail" <|
         oneOf
@@ -192,9 +192,9 @@ spaces =
     ignore zeroOrMore (\c -> c == ' ')
 
 
-positioned : Parser a -> Parser (Positioned a)
+positioned : Parser a -> Parser (Pos a)
 positioned parser =
-    succeed (\start a end -> Positioned start end a)
+    succeed (\start a end -> Pos start end a)
         |= getPosition
         |= parser
         |= getPosition

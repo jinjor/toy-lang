@@ -7,7 +7,7 @@ import Dict exposing (Dict)
 type alias Variable =
     { id : Identifier
     , type_ : Maybe ( TypeExp, Bool )
-    , exp : Maybe (Positioned Expression)
+    , exp : Maybe (Pos Expression)
     , error : Maybe String
     }
 
@@ -68,7 +68,7 @@ formatType type_ =
             name
 
 
-formatError : String -> Positioned String -> String
+formatError : String -> Pos String -> String
 formatError source e =
     toString (Tuple.first e.start)
         ++ ":"
@@ -77,21 +77,21 @@ formatError source e =
         ++ e.content
 
 
-collectErrors : Variables -> List (Positioned String)
+collectErrors : Variables -> List (Pos String)
 collectErrors typedDict =
     typedDict
         |> Dict.values
         |> List.filterMap collectError
 
 
-collectError : Variable -> Maybe (Positioned String)
+collectError : Variable -> Maybe (Pos String)
 collectError v =
     case ( v.exp, v.error ) of
         ( Just exp, Just e ) ->
-            Just (Positioned exp.start exp.end e)
+            Just (Pos exp.start exp.end e)
 
         ( Nothing, Just e ) ->
-            Just (Positioned ( -1, -1 ) ( -1, -1 ) e)
+            Just (Pos ( -1, -1 ) ( -1, -1 ) e)
 
         _ ->
             Nothing
@@ -126,7 +126,7 @@ addTypeUntilEnd dict =
                 dict
 
 
-lookupType : Variables -> Identifier -> List (Positioned Expression) -> Result String ( TypeExp, Variables )
+lookupType : Variables -> Identifier -> List (Pos Expression) -> Result String ( TypeExp, Variables )
 lookupType dict id tail =
     case Dict.get id dict of
         Nothing ->
@@ -156,7 +156,7 @@ lookupTypeForExpressions :
     Variables
     -> Variable
     -> TypeExp
-    -> List (Positioned Expression)
+    -> List (Pos Expression)
     -> Result String ( TypeExp, Variables )
 lookupTypeForExpressions dict v type_ tail =
     case tail of
@@ -175,7 +175,7 @@ lookupTypeForExpressions dict v type_ tail =
                     )
 
 
-makeLocalVariableMock : Positioned Expression -> Variable
+makeLocalVariableMock : Pos Expression -> Variable
 makeLocalVariableMock exp =
     Variable "__local__" Nothing (Just exp) Nothing
 
@@ -246,7 +246,7 @@ makeVariables (Module statements) =
 
 updateByAssignment :
     Identifier
-    -> Positioned Expression
+    -> Pos Expression
     -> Variables
     -> Variables
 updateByAssignment id exp dict =
