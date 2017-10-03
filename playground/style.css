@@ -1,0 +1,65 @@
+html, head, body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: calibri, helvetica, arial, sans-serif;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.header {
+  height: 30px;
+  line-height: 30px;
+  display: flex;
+  background-color: #734;
+  color: #eee;
+}
+
+.title {
+  padding-left: 20px;
+  padding-right: 20px;
+  margin: 0;
+  font-size: 20px;
+  width: 100px;
+  line-height: 30px;
+}
+
+.button {
+  padding-left: 15px;
+  padding-right: 15px;
+  border: none;
+  background-color: #623;
+  color: inherit;
+  outline: none;
+}
+
+.button:hover {
+  background-color: #845;
+}
+
+.main {
+  position: absolute;
+  display: flex;
+  width: 100%;
+  height: calc(100% - 30px);
+  bottom: 0;
+}
+
+.editor {
+  width: 50%;
+}
+
+.result {
+  margin: 0;
+  width: 50%;
+  padding: 20px;
+  font-size: small;
+  word-wrap: break-word;
+  white-space: normal;
+  background-color: black;
+  color: white;
+  overflow-y: scroll;
+}

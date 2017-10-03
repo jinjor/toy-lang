@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>toy-lang</title>
+  <link rel="stylesheet" href="./style.css"></link>
+  <script src="./elm.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.0/ace.js"></script>
+</head>
+
+<body>
+  <header class="header">
+    <h1 class="title">Toy Lang</h1>
+    <button class="button" id="compile">Compile</button>
+  </header>
+  <main class="main">
+    <div id="editor" class="editor"></div>
+    <pre id="result" class="result"></pre>
+  </main>
+  <script type="text/javascript">
+    const parser = Elm.Compile.worker();
+    parser.ports.parsed.subscribe(mes => {
+      log(mes);
+    });
+    parser.ports.checked.subscribe(mes => {
+      log(mes);
+    });
+    parser.ports.err.subscribe(mes => {
+      log(mes);
+    });
+
+    let result = '';
+
+    function compile(source) {
+      result = '';
+      document.getElementById('result').textContent = '';
+      let start = Date.now();
+      parser.ports.parse.send(source);
+    }
+
+    function log(s) {
+      console.log(s);
+      result = result + s + '\n';
+      document.getElementById('result').textContent = result;
+    }
+
+    setTimeout(() => {
+      var editor = ace.edit('editor');
+      editor.setTheme("ace/theme/monokai");
+      editor.getSession().setMode("ace/mode/elm");
+      document.getElementById('compile').addEventListener('click', e => {
+        e.preventDefault();
+        compile(editor.getValue());
+      });
+    });
+  </script>
+</body>
+
+</html>
