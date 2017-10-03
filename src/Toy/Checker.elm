@@ -141,15 +141,48 @@ lookupType dict id tail =
                             Debug.crash "arienai"
             in
                 result
-                    |> Result.map
+                    |> Result.andThen
                         (\( type_, newDict ) ->
-                            case tail of
-                                [] ->
-                                    ( type_, newDict )
-
-                                head :: tail ->
-                                    Debug.crash "not implemented yet"
+                            lookupTypeForExpressions newDict v type_ tail
                         )
+
+
+lookupTypeForExpressions :
+    Variables
+    -> Variable
+    -> TypeNames
+    -> List (Positioned Expression)
+    -> Result String ( TypeNames, Variables )
+lookupTypeForExpressions dict v type_ tail =
+    case tail of
+        [] ->
+            Ok ( type_, dict )
+
+        firstArg :: tailArgs ->
+            lookupTypeForExpression dict (makeLocalVariableMock firstArg) firstArg.content
+                |> Result.andThen
+                    (\( firstArgType, newDict ) ->
+                        applyType type_ firstArgType
+                            |> Result.andThen
+                                (\nextType ->
+                                    lookupTypeForExpressions newDict v nextType tailArgs
+                                )
+                    )
+
+
+makeLocalVariableMock : Positioned Expression -> Variable
+makeLocalVariableMock exp =
+    Variable "__local__" Nothing (Just exp) Nothing
+
+
+applyType : TypeNames -> TypeNames -> Result String TypeNames
+applyType (TypeNames t1 tail) t2 =
+    case tail of
+        Just t ->
+            Ok t
+
+        Nothing ->
+            Err "too many arguments"
 
 
 lookupTypeForExpression : Variables -> Variable -> Expression -> Result String ( TypeNames, Variables )
