@@ -23,7 +23,16 @@ type alias Range =
 
 
 type alias Error =
-    ( Range, String )
+    ( Range, ErrorType )
+
+
+type ErrorType
+    = VariableNotDefined Identifier
+    | VariableDuplicated Identifier
+    | TypeNotDefined String
+    | TypeDuplicated Identifier
+    | TypeMismatch TypeExp TypeExp
+    | TooManyArguments
 
 
 check : Module -> Variables
@@ -84,7 +93,28 @@ formatError source ( range, e ) =
         ++ ":"
         ++ toString (Tuple.second range.start)
         ++ " "
-        ++ e
+        ++ (case e of
+                VariableNotDefined id ->
+                    id ++ " is not defined"
+
+                VariableDuplicated id ->
+                    id ++ " is already defined"
+
+                TypeNotDefined name ->
+                    "type " ++ name ++ "is not defined"
+
+                TypeDuplicated id ->
+                    id ++ " is already typed"
+
+                TypeMismatch expected actual ->
+                    "expected type "
+                        ++ formatType expected
+                        ++ " but got type "
+                        ++ formatType actual
+
+                TooManyArguments ->
+                    "too many arguments"
+           )
 
 
 collectErrors : Variables -> List Error
@@ -125,7 +155,7 @@ lookupType : Variables -> Identifier -> Range -> List (Pos Expression) -> Result
 lookupType dict id range tail =
     case Dict.get id dict of
         Nothing ->
-            Err ( range, id ++ " is not defined" )
+            Err ( range, VariableNotDefined id )
 
         Just v ->
             let
@@ -174,7 +204,7 @@ lookupTypeForExpressions dict type_ tail =
                     )
 
 
-applyType : TypeExp -> TypeExp -> Result String TypeExp
+applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
 applyType t1 t2 =
     case t1 of
         ArrowType head tail ->
@@ -183,13 +213,13 @@ applyType t1 t2 =
                     if head == t2 then
                         Ok t
                     else
-                        Err "type mismatch"
+                        Err (TypeMismatch head t2)
 
                 Nothing ->
-                    Err "too many arguments"
+                    Err TooManyArguments
 
         AtomType name ->
-            Err "too many arguments"
+            Err TooManyArguments
 
 
 lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
@@ -240,7 +270,7 @@ updateByAssignment id exp dict =
                         if old.exp == Nothing then
                             Just <| { old | exp = Just exp }
                         else
-                            Just <| { old | errors = ( Range exp.start exp.end, id ++ " is already defined." ) :: old.errors }
+                            Just <| { old | errors = ( Range exp.start exp.end, VariableDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id Nothing (Just exp) []
@@ -261,7 +291,7 @@ updateByTypeSignature id typeExp dict =
                         if old.type_ == Nothing then
                             Just <| { old | type_ = Just ( typeExp.content, False ) }
                         else
-                            Just <| { old | errors = ( Range typeExp.start typeExp.end, id ++ " is already defined." ) :: old.errors }
+                            Just <| { old | errors = ( Range typeExp.start typeExp.end, TypeDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id (Just ( typeExp.content, False )) Nothing []
