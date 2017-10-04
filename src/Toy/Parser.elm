@@ -38,7 +38,11 @@ type alias Identifier =
 
 type TypeExp
     = ArrowType TypeExp (Maybe TypeExp)
-    | AtomType String
+    | TypeValue TypeConstructor (List TypeExp)
+
+
+type alias TypeConstructor =
+    String
 
 
 type Expression
@@ -104,15 +108,7 @@ typeSignature =
 typeExp : Parser TypeExp
 typeExp =
     inContext "type expression" <|
-        (oneOf
-            [ succeed identity
-                |. symbol "("
-                |. spaces
-                |= lazy (\_ -> typeExp)
-                |. spaces
-                |. symbol ")"
-            , map AtomType typeName
-            ]
+        (lazy (\_ -> singleTypeExp)
             |> andThen
                 (\head ->
                     succeed (ArrowType head)
@@ -128,9 +124,44 @@ typeExp =
         )
 
 
-typeName : Parser String
-typeName =
-    inContext "type name" <|
+singleTypeExp : Parser TypeExp
+singleTypeExp =
+    inContext "single type expression" <|
+        oneOf
+            [ succeed identity
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> typeExp)
+                |. spaces
+                |. symbol ")"
+            , lazy (\_ -> typeValue)
+            ]
+
+
+typeValue : Parser TypeExp
+typeValue =
+    inContext "type value" <|
+        succeed TypeValue
+            |= typeConstructor
+            |. spaces
+            |= lazy (\_ -> typeArugments)
+
+
+typeArugments : Parser (List TypeExp)
+typeArugments =
+    inContext "type arguments" <|
+        oneOf
+            [ succeed (::)
+                |= lazy (\_ -> singleTypeExp)
+                |. spaces
+                |= lazy (\_ -> typeArugments)
+            , succeed []
+            ]
+
+
+typeConstructor : Parser String
+typeConstructor =
+    inContext "type constructor" <|
         source <|
             ignore (Exactly 1) Char.isUpper
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)

@@ -75,8 +75,9 @@ formatType type_ =
                 Nothing ->
                     formatType head
 
-        AtomType name ->
-            name
+        TypeValue constructor args ->
+            (constructor :: List.map formatType args)
+                |> String.join " "
 
 
 formatError : String -> Error -> String
@@ -220,7 +221,7 @@ applyType t1 t2 =
                 Nothing ->
                     Err TooManyArguments
 
-        AtomType name ->
+        TypeValue _ _ ->
             Err TooManyArguments
 
 
@@ -228,10 +229,10 @@ lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp,
 lookupTypeForExpression dict exp =
     case exp.content of
         NumberLiteral s ->
-            Ok ( AtomType "Number", dict )
+            Ok ( TypeValue "Number" [], dict )
 
         StringLiteral s ->
-            Ok ( AtomType "String", dict )
+            Ok ( TypeValue "String" [], dict )
 
         Ref id tail ->
             lookupType dict id exp.range tail

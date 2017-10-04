@@ -24,3 +24,7 @@ k = j 1
 l : String -> Number
 
 m = l 1
+
+n : List Foo -> Bar
+
+o = n 1
