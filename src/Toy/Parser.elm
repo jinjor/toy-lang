@@ -144,17 +144,17 @@ typeValue =
         succeed TypeValue
             |= typeConstructor
             |. spaces
-            |= lazy (\_ -> typeArugments)
+            |= lazy (\_ -> typeArguments)
 
 
-typeArugments : Parser (List TypeExp)
-typeArugments =
+typeArguments : Parser (List TypeExp)
+typeArguments =
     inContext "type arguments" <|
         oneOf
             [ succeed (::)
                 |= lazy (\_ -> singleTypeExp)
                 |. spaces
-                |= lazy (\_ -> typeArugments)
+                |= lazy (\_ -> typeArguments)
             , succeed []
             ]
 
