@@ -30,7 +30,7 @@ port parse : (String -> msg) -> Sub msg
 port parsed : String -> Cmd msg
 
 
-port checked : String -> Cmd msg
+port checked : ( List String, List String ) -> Cmd msg
 
 
 port err : String -> Cmd msg
@@ -76,7 +76,7 @@ update msg model =
 
         Check module_ ->
             ( model
-            , checked (toString <| ToyChecker.check module_)
+            , checked (ToyChecker.check module_)
             )
 
 

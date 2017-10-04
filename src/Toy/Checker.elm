@@ -29,7 +29,7 @@ type ErrorType
     | TooManyArguments
 
 
-check : Module -> Variables
+check : Module -> ( List String, List String )
 check module_ =
     let
         dict =
@@ -41,15 +41,13 @@ check module_ =
         errors =
             collectErrors typed
                 |> List.map (formatError "")
-                |> List.map (Debug.log "error")
 
         interfaces =
             typed
                 |> Dict.values
                 |> List.map formatInterface
-                |> List.map (Debug.log "type")
     in
-        typed
+        ( errors, interfaces )
 
 
 formatInterface : Variable -> String
@@ -87,28 +85,32 @@ formatError source ( range, e ) =
         ++ ":"
         ++ toString range.start.col
         ++ " "
-        ++ (case e of
-                VariableNotDefined id ->
-                    id ++ " is not defined"
+        ++ formatErrorType e
 
-                VariableDuplicated id ->
-                    id ++ " is already defined"
 
-                TypeNotDefined name ->
-                    "type " ++ name ++ "is not defined"
+formatErrorType : ErrorType -> String
+formatErrorType e =
+    case e of
+        VariableNotDefined id ->
+            id ++ " is not defined"
 
-                TypeDuplicated id ->
-                    id ++ " is already typed"
+        VariableDuplicated id ->
+            id ++ " is already defined"
 
-                TypeMismatch expected actual ->
-                    "expected type "
-                        ++ formatType expected
-                        ++ " but got type "
-                        ++ formatType actual
+        TypeNotDefined name ->
+            "type " ++ name ++ "is not defined"
 
-                TooManyArguments ->
-                    "too many arguments"
-           )
+        TypeDuplicated id ->
+            id ++ " is already typed"
+
+        TypeMismatch expected actual ->
+            "expected type "
+                ++ formatType expected
+                ++ " but got type "
+                ++ formatType actual
+
+        TooManyArguments ->
+            "too many arguments"
 
 
 collectErrors : Variables -> List Error

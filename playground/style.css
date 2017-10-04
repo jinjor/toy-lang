@@ -58,7 +58,7 @@ body {
   padding: 20px;
   font-size: small;
   word-wrap: break-word;
-  white-space: normal;
+  /*white-space: normal;*/
   background-color: black;
   color: white;
   overflow-y: scroll;
