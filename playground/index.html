@@ -20,20 +20,6 @@
   </main>
   <script type="text/javascript">
     const parser = Elm.Compile.worker();
-    parser.ports.parsed.subscribe(mes => {
-      // log(mes);
-    });
-    parser.ports.checked.subscribe(mes => {
-      mes[0].forEach(m => {
-        log(m);
-      });
-      mes[1].forEach(m => {
-        log(m);
-      });
-    });
-    parser.ports.err.subscribe(mes => {
-      log(mes);
-    });
 
     let result = '';
 
@@ -57,6 +43,33 @@
       document.getElementById('compile').addEventListener('click', e => {
         e.preventDefault();
         compile(editor.getValue());
+      });
+
+      parser.ports.parsed.subscribe(mes => {
+        // log(mes);
+      });
+      parser.ports.checked.subscribe(mes => {
+        const errors = mes[0];
+        const annotations = mes[1];
+        errors.forEach(e => {
+          log(e);
+        });
+        annotations.forEach(a => {
+          log(a);
+        });
+        const annotations = errors.map(e => {
+          const splitted = e.split(' ');
+          return {
+            row: +splitted[0].split(':')[0] - 1,
+            column: +splitted[0].split(':')[1] - 1,
+            text: splitted.slice(2).join(' '),
+            type: 'error'
+          };
+        });
+        editor.getSession().setAnnotations(annotations);
+      });
+      parser.ports.err.subscribe(mes => {
+        log(mes);
       });
     });
   </script>

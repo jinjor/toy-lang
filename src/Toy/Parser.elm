@@ -28,7 +28,7 @@ type alias Pos a =
 
 
 type Statement
-    = Assignment Identifier (Pos Expression)
+    = Assignment (Pos Identifier) (Pos Expression)
     | TypeSignature Identifier (Pos TypeExp)
 
 
@@ -84,7 +84,7 @@ statement =
     inContext "statement" <|
         positioned <|
             succeed (\id f -> f id)
-                |= identifier
+                |= positioned identifier
                 |. spaces
                 |= oneOf
                     [ assignment
@@ -92,10 +92,10 @@ statement =
                     ]
 
 
-typeSignature : Parser (Identifier -> Statement)
+typeSignature : Parser (Pos Identifier -> Statement)
 typeSignature =
     inContext "type signature" <|
-        succeed (\typeExp id -> TypeSignature id typeExp)
+        succeed (\typeExp id -> TypeSignature id.content typeExp)
             |. symbol ":"
             |. spaces
             |= positioned typeExp
@@ -136,7 +136,7 @@ typeName =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-assignment : Parser (Identifier -> Statement)
+assignment : Parser (Pos Identifier -> Statement)
 assignment =
     inContext "assignment" <|
         succeed (\exp id -> Assignment id exp)

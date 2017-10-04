@@ -81,11 +81,17 @@ formatType type_ =
 
 formatError : String -> Error -> String
 formatError source ( range, e ) =
-    toString range.start.row
-        ++ ":"
-        ++ toString range.start.col
-        ++ " "
-        ++ formatErrorType e
+    formatRange range ++ " " ++ formatErrorType e
+
+
+formatRange : Range -> String
+formatRange range =
+    formatPosition range.start ++ " " ++ formatPosition range.end
+
+
+formatPosition : Position -> String
+formatPosition pos =
+    toString pos.row ++ ":" ++ toString pos.col
 
 
 formatErrorType : ErrorType -> String
@@ -247,38 +253,39 @@ makeVariables (Module statements) =
                         updateByAssignment id exp dict
 
                     TypeSignature id typeExp ->
-                        updateByTypeSignature id typeExp dict
+                        updateByTypeSignature statement.range id typeExp dict
             )
             Dict.empty
 
 
 updateByAssignment :
-    Identifier
+    Pos Identifier
     -> Pos Expression
     -> Variables
     -> Variables
 updateByAssignment id exp dict =
     dict
-        |> Dict.update id
+        |> Dict.update id.content
             (\maybeVar ->
                 case maybeVar of
                     Just old ->
                         if old.exp == Nothing then
                             Just <| { old | exp = Just exp }
                         else
-                            Just <| { old | errors = ( exp.range, VariableDuplicated id ) :: old.errors }
+                            Just <| { old | errors = ( id.range, VariableDuplicated id.content ) :: old.errors }
 
                     Nothing ->
-                        Just <| Variable id Nothing (Just exp) []
+                        Just <| Variable id.content Nothing (Just exp) []
             )
 
 
 updateByTypeSignature :
-    Identifier
+    Range
+    -> Identifier
     -> Pos TypeExp
     -> Variables
     -> Variables
-updateByTypeSignature id typeExp dict =
+updateByTypeSignature statementRange id typeExp dict =
     dict
         |> Dict.update id
             (\maybeVar ->
@@ -287,7 +294,7 @@ updateByTypeSignature id typeExp dict =
                         if old.type_ == Nothing then
                             Just <| { old | type_ = Just ( typeExp.content, False ) }
                         else
-                            Just <| { old | errors = ( typeExp.range, TypeDuplicated id ) :: old.errors }
+                            Just <| { old | errors = ( statementRange, TypeDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id (Just ( typeExp.content, False )) Nothing []
