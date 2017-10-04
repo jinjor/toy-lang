@@ -72,7 +72,7 @@ update msg model =
                     )
 
                 Err e ->
-                    ( model, err (toString e) )
+                    ( model, err (ToyParser.formatError e) )
 
         Check module_ ->
             ( model

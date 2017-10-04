@@ -208,3 +208,44 @@ positioned parser =
         |= getPosition
         |= parser
         |= getPosition
+
+
+formatError : Parser.Error -> String
+formatError e =
+    toString e.row ++ ":" ++ toString e.col ++ " " ++ formatProblem e.problem
+
+
+formatProblem : Parser.Problem -> String
+formatProblem problem =
+    case problem of
+        BadOneOf problems ->
+            problems
+                |> List.map formatProblem
+                |> String.join ", "
+
+        BadInt ->
+            "not an integer"
+
+        BadFloat ->
+            "not a float"
+
+        BadRepeat ->
+            "internal error"
+
+        ExpectingEnd ->
+            "expecting end"
+
+        ExpectingSymbol symbol ->
+            "expecting symbol " ++ toString symbol
+
+        ExpectingKeyword keyword ->
+            "expecting keyword " ++ toString keyword
+
+        ExpectingVariable ->
+            "expecting variable"
+
+        ExpectingClosing s ->
+            "expecting closing " ++ toString s
+
+        Fail s ->
+            s

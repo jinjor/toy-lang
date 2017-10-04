@@ -40,6 +40,23 @@
       var editor = ace.edit('editor');
       editor.setTheme("ace/theme/monokai");
       editor.getSession().setMode("ace/mode/elm");
+      editor.commands.addCommand({
+        name: 'compile',
+        bindKey: {
+          win: 'Ctrl-s',
+          mac: 'Command-s'
+        },
+        exec: _ => {
+          compile(editor.getValue());
+        }
+      });
+      editor.getSession().on('change', () => {
+        localStorage.setItem('toy.playground.source', editor.getValue());
+      });
+      const source = localStorage.getItem('toy.playground.source');
+      if (source) {
+        editor.setValue(source);
+      }
       document.getElementById('compile').addEventListener('click', e => {
         e.preventDefault();
         compile(editor.getValue());
@@ -48,13 +65,24 @@
       parser.ports.parsed.subscribe(mes => {
         // log(mes);
       });
+      parser.ports.err.subscribe(e => {
+        log(e);
+        const splitted = e.split(' ');
+        const annotations = [{
+          row: +splitted[0].split(':')[0] - 1,
+          column: +splitted[0].split(':')[1] - 1,
+          text: splitted.slice(1).join(' '),
+          type: 'error'
+        }];
+        editor.getSession().setAnnotations(annotations);
+      });
       parser.ports.checked.subscribe(mes => {
         const errors = mes[0];
-        const annotations = mes[1];
+        const interfaces = mes[1];
         errors.forEach(e => {
           log(e);
         });
-        annotations.forEach(a => {
+        interfaces.forEach(a => {
           log(a);
         });
         const annotations = errors.map(e => {
@@ -67,9 +95,6 @@
           };
         });
         editor.getSession().setAnnotations(annotations);
-      });
-      parser.ports.err.subscribe(mes => {
-        log(mes);
       });
     });
   </script>
