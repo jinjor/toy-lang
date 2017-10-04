@@ -10,12 +10,19 @@ type Module
 
 
 type alias Position =
-    ( Int, Int )
+    { row : Int
+    , col : Int
+    }
+
+
+type alias Range =
+    { start : Position
+    , end : Position
+    }
 
 
 type alias Pos a =
-    { start : Position
-    , end : Position
+    { range : Range
     , content : a
     }
 
@@ -194,7 +201,10 @@ spaces =
 
 positioned : Parser a -> Parser (Pos a)
 positioned parser =
-    succeed (\start a end -> Pos start end a)
+    succeed
+        (\( row1, col1 ) a ( row2, col2 ) ->
+            Pos (Range (Position row1 col1) (Position row2 col2)) a
+        )
         |= getPosition
         |= parser
         |= getPosition

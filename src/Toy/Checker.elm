@@ -16,12 +16,6 @@ type alias Variables =
     Dict Identifier Variable
 
 
-type alias Range =
-    { start : ( Int, Int )
-    , end : ( Int, Int )
-    }
-
-
 type alias Error =
     ( Range, ErrorType )
 
@@ -89,9 +83,9 @@ formatType type_ =
 
 formatError : String -> Error -> String
 formatError source ( range, e ) =
-    toString (Tuple.first range.start)
+    toString range.start.row
         ++ ":"
-        ++ toString (Tuple.second range.start)
+        ++ toString range.start.col
         ++ " "
         ++ (case e of
                 VariableNotDefined id ->
@@ -135,7 +129,7 @@ addTypeUntilEnd dict =
     in
         case target of
             Just v ->
-                case lookupType dict v.id (Range ( -1, -1 ) ( -1, -1 )) [] of
+                case lookupType dict v.id (Range (Position -1 -1) (Position -1 -1)) [] of
                     Err e ->
                         dict
                             |> Dict.insert v.id
@@ -196,7 +190,7 @@ lookupTypeForExpressions dict type_ tail =
                 |> Result.andThen
                     (\( firstArgType, newDict ) ->
                         applyType type_ firstArgType
-                            |> Result.mapError (\e -> ( Range ( -2, -2 ) ( -2, -2 ), e ))
+                            |> Result.mapError (\e -> ( Range (Position -2 -2) (Position -2 -2), e ))
                             |> Result.andThen
                                 (\nextType ->
                                     lookupTypeForExpressions newDict nextType tailArgs
@@ -232,7 +226,7 @@ lookupTypeForExpression dict exp =
             Ok ( AtomType "String", dict )
 
         Ref id tail ->
-            lookupType dict id (Range exp.start exp.end) tail
+            lookupType dict id exp.range tail
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables
@@ -270,7 +264,7 @@ updateByAssignment id exp dict =
                         if old.exp == Nothing then
                             Just <| { old | exp = Just exp }
                         else
-                            Just <| { old | errors = ( Range exp.start exp.end, VariableDuplicated id ) :: old.errors }
+                            Just <| { old | errors = ( exp.range, VariableDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id Nothing (Just exp) []
@@ -291,7 +285,7 @@ updateByTypeSignature id typeExp dict =
                         if old.type_ == Nothing then
                             Just <| { old | type_ = Just ( typeExp.content, False ) }
                         else
-                            Just <| { old | errors = ( Range typeExp.start typeExp.end, TypeDuplicated id ) :: old.errors }
+                            Just <| { old | errors = ( typeExp.range, TypeDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id (Just ( typeExp.content, False )) Nothing []
