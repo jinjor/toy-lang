@@ -78,7 +78,7 @@ formatType type_ =
             name
 
 
-formatError : String -> ( Range, String ) -> String
+formatError : String -> Error -> String
 formatError source ( range, e ) =
     toString (Tuple.first range.start)
         ++ ":"
@@ -87,7 +87,7 @@ formatError source ( range, e ) =
         ++ e
 
 
-collectErrors : Variables -> List ( Range, String )
+collectErrors : Variables -> List Error
 collectErrors typedDict =
     typedDict
         |> Dict.values
@@ -105,11 +105,11 @@ addTypeUntilEnd dict =
     in
         case target of
             Just v ->
-                case lookupType dict v.id [] of
+                case lookupType dict v.id (Range ( -1, -1 ) ( -1, -1 )) [] of
                     Err e ->
                         dict
                             |> Dict.insert v.id
-                                { v | errors = ( Range ( -1, -1 ) ( -1, 1 ), e ) :: v.errors }
+                                { v | errors = e :: v.errors }
                             |> addTypeUntilEnd
 
                     Ok ( typeExp, newDict ) ->
@@ -121,18 +121,22 @@ addTypeUntilEnd dict =
                 dict
 
 
-lookupType : Variables -> Identifier -> List (Pos Expression) -> Result String ( TypeExp, Variables )
-lookupType dict id tail =
+lookupType : Variables -> Identifier -> Range -> List (Pos Expression) -> Result Error ( TypeExp, Variables )
+lookupType dict id range tail =
     case Dict.get id dict of
         Nothing ->
-            Err (id ++ " is not defined")
+            Err ( range, id ++ " is not defined" )
 
         Just v ->
             let
                 result =
                     case ( v.type_, v.exp ) of
                         ( Nothing, Just exp ) ->
-                            lookupTypeForExpression dict v exp.content
+                            lookupTypeForExpression dict exp
+                                |> Result.map
+                                    (\( type_, newDict ) ->
+                                        ( type_, addCheckedType v type_ newDict )
+                                    )
 
                         ( Just ( type_, _ ), _ ) ->
                             Ok ( type_, dict )
@@ -143,36 +147,31 @@ lookupType dict id tail =
                 result
                     |> Result.andThen
                         (\( type_, newDict ) ->
-                            lookupTypeForExpressions newDict v type_ tail
+                            lookupTypeForExpressions newDict type_ tail
                         )
 
 
 lookupTypeForExpressions :
     Variables
-    -> Variable
     -> TypeExp
     -> List (Pos Expression)
-    -> Result String ( TypeExp, Variables )
-lookupTypeForExpressions dict v type_ tail =
+    -> Result Error ( TypeExp, Variables )
+lookupTypeForExpressions dict type_ tail =
     case tail of
         [] ->
             Ok ( type_, dict )
 
         firstArg :: tailArgs ->
-            lookupTypeForExpression dict (makeLocalVariableMock firstArg) firstArg.content
+            lookupTypeForExpression dict firstArg
                 |> Result.andThen
                     (\( firstArgType, newDict ) ->
                         applyType type_ firstArgType
+                            |> Result.mapError (\e -> ( Range ( -2, -2 ) ( -2, -2 ), e ))
                             |> Result.andThen
                                 (\nextType ->
-                                    lookupTypeForExpressions newDict v nextType tailArgs
+                                    lookupTypeForExpressions newDict nextType tailArgs
                                 )
                     )
-
-
-makeLocalVariableMock : Pos Expression -> Variable
-makeLocalVariableMock exp =
-    Variable "__local__" Nothing (Just exp) []
 
 
 applyType : TypeExp -> TypeExp -> Result String TypeExp
@@ -193,29 +192,17 @@ applyType t1 t2 =
             Err "too many arguments"
 
 
-lookupTypeForExpression : Variables -> Variable -> Expression -> Result String ( TypeExp, Variables )
-lookupTypeForExpression dict v exp =
-    case exp of
+lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
+lookupTypeForExpression dict exp =
+    case exp.content of
         NumberLiteral s ->
-            let
-                type_ =
-                    AtomType "Number"
-            in
-                Ok ( type_, addCheckedType v type_ dict )
+            Ok ( AtomType "Number", dict )
 
         StringLiteral s ->
-            let
-                type_ =
-                    AtomType "String"
-            in
-                Ok ( type_, addCheckedType v type_ dict )
+            Ok ( AtomType "String", dict )
 
         Ref id tail ->
-            lookupType dict id tail
-                |> Result.map
-                    (\( type_, newDict ) ->
-                        ( type_, addCheckedType v type_ newDict )
-                    )
+            lookupType dict id (Range exp.start exp.end) tail
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables

@@ -13,6 +13,14 @@ e : String
 
 f = g
 
-h : Number -> String -> Number
+h : Number -> Number -> String
 
 i = h 1
+
+j = i 2
+
+k = j 1
+
+l : String -> Number
+
+m = l 1
