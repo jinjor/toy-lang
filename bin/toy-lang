@@ -1,11 +1,11 @@
 #!/bin/sh
-set -eu
-cd `dirname $0`
+set -e
+here=`dirname $0`
 
-file="../commands/${1}.js"
+file=${here}/../commands/${1}.js
 
 if [ ! -e $file ]; then
-  file=commands/default
+  file=../commands/default
 fi
 
-node $file ${@:2}
+node $file "$2" "$3" "$4" "$5" "$6"
