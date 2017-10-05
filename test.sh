@@ -1,2 +1,4 @@
+#!/bin/sh
+
 sh build.sh &&
-sh bin/toy-lang compile example/Hello.toy
+sh tests/compile.sh

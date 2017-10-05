@@ -28,3 +28,5 @@ m = l 1
 n : List Foo -> Bar
 
 o = n 1
+
+p : List (Number -> List (Int -> String) String) -> List (Int)

@@ -65,19 +65,34 @@ formatInterface v =
 
 
 formatType : TypeExp -> String
-formatType type_ =
+formatType =
+    formatTypeHelp False
+
+
+formatTypeHelp : Bool -> TypeExp -> String
+formatTypeHelp paren type_ =
     case type_ of
         ArrowType head tail ->
             case tail of
                 Just t ->
-                    formatType head ++ " -> " ++ formatType t
+                    (formatTypeHelp False head ++ " -> " ++ formatTypeHelp False t)
+                        |> parenIf paren
 
                 Nothing ->
-                    formatType head
+                    formatTypeHelp False head
 
         TypeValue constructor args ->
-            (constructor :: List.map formatType args)
+            (constructor :: List.map (formatTypeHelp True) args)
                 |> String.join " "
+                |> parenIf (paren && args /= [])
+
+
+parenIf : Bool -> String -> String
+parenIf condition s =
+    if condition then
+        "(" ++ s ++ ")"
+    else
+        s
 
 
 formatError : String -> Error -> String

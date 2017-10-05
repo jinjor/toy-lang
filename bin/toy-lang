@@ -1,6 +1,8 @@
 #!/bin/sh
+set -eu
+cd `dirname $0`
 
-file="commands/${1}.js"
+file="../commands/${1}.js"
 
 if [ ! -e $file ]; then
   file=commands/default
