@@ -253,9 +253,9 @@ updateByAssignment id exp dict =
                 case maybeVar of
                     Just old ->
                         if old.exp == Nothing then
-                            Just <| { old | exp = Just exp }
+                            Just { old | exp = Just exp }
                         else
-                            Just <| { old | errors = ( id.range, VariableDuplicated id.content ) :: old.errors }
+                            Just { old | errors = ( id.range, VariableDuplicated id.content ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id.content Nothing (Just exp) []
@@ -275,9 +275,9 @@ updateByTypeSignature statementRange id typeExp dict =
                 case maybeVar of
                     Just old ->
                         if old.type_ == Nothing then
-                            Just <| { old | type_ = Just ( typeExp.content, False ) }
+                            Just { old | type_ = Just ( typeExp.content, False ) }
                         else
-                            Just <| { old | errors = ( statementRange, TypeDuplicated id ) :: old.errors }
+                            Just { old | errors = ( statementRange, TypeDuplicated id ) :: old.errors }
 
                     Nothing ->
                         Just <| Variable id (Just ( typeExp.content, False )) Nothing []
