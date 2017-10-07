@@ -114,17 +114,26 @@ addTypeUntilEnd dict =
     in
         case target of
             Just v ->
-                case lookupTypeForInterface dict v.id (Range (Position -1 -1) (Position -1 -1)) of
-                    Err e ->
-                        dict
-                            |> Dict.insert v.id
-                                { v | errors = e :: v.errors }
-                            |> addTypeUntilEnd
+                let
+                    range =
+                        case v.exp of
+                            Just exp ->
+                                exp.range
 
-                    Ok ( typeExp, newDict ) ->
-                        newDict
-                            |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
-                            |> addTypeUntilEnd
+                            _ ->
+                                Range (Position -1 -1) (Position -1 -1)
+                in
+                    case lookupTypeForInterface dict v.id range of
+                        Err e ->
+                            dict
+                                |> Dict.insert v.id
+                                    { v | errors = e :: v.errors }
+                                |> addTypeUntilEnd
+
+                        Ok ( typeExp, newDict ) ->
+                            newDict
+                                |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
+                                |> addTypeUntilEnd
 
             _ ->
                 dict
@@ -150,29 +159,6 @@ lookupTypeForInterface dict id range =
 
                 ( Nothing, Nothing ) ->
                     Debug.crash "arienai"
-
-
-lookupTypeForExpressions :
-    Variables
-    -> TypeExp
-    -> List (Pos Expression)
-    -> Result Error ( TypeExp, Variables )
-lookupTypeForExpressions dict type_ tail =
-    case tail of
-        [] ->
-            Ok ( type_, dict )
-
-        firstArg :: tailArgs ->
-            lookupTypeForExpression dict firstArg
-                |> Result.andThen
-                    (\( firstArgType, newDict ) ->
-                        applyType type_ firstArgType
-                            |> Result.mapError (\e -> ( Range (Position -2 -2) (Position -2 -2), e ))
-                            |> Result.andThen
-                                (\nextType ->
-                                    lookupTypeForExpressions newDict nextType tailArgs
-                                )
-                    )
 
 
 applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
@@ -206,7 +192,31 @@ lookupTypeForExpression dict exp =
             lookupTypeForInterface dict id exp.range
                 |> Result.andThen
                     (\( type_, newDict ) ->
-                        lookupTypeForExpressions newDict type_ tail
+                        lookupTypeForExpressionTail newDict exp.range type_ tail
+                    )
+
+
+lookupTypeForExpressionTail :
+    Variables
+    -> Range
+    -> TypeExp
+    -> List (Pos Expression)
+    -> Result Error ( TypeExp, Variables )
+lookupTypeForExpressionTail dict originalRange type_ tail =
+    case tail of
+        [] ->
+            Ok ( type_, dict )
+
+        firstArg :: tailArgs ->
+            lookupTypeForExpression dict firstArg
+                |> Result.andThen
+                    (\( firstArgType, newDict ) ->
+                        applyType type_ firstArgType
+                            |> Result.mapError (\e -> ( originalRange, e ))
+                            |> Result.andThen
+                                (\nextType ->
+                                    lookupTypeForExpressionTail newDict originalRange nextType tailArgs
+                                )
                     )
 
 
