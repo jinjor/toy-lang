@@ -26,15 +26,13 @@ formatTypeHelp : Bool -> TypeExp -> String
 formatTypeHelp isArg type_ =
     case type_ of
         ArrowType head tail ->
-            formatTypeHelp False head
-                ++ (case tail of
-                        Just t ->
-                            " -> " ++ formatTypeHelp False t
+            case tail of
+                Just t ->
+                    (formatTypeHelp False head ++ " -> " ++ formatTypeHelp False t)
+                        |> parenIf isArg
 
-                        Nothing ->
-                            ""
-                   )
-                |> parenIf isArg
+                Nothing ->
+                    formatTypeHelp isArg head
 
         TypeValue constructor args ->
             (constructor :: List.map (formatTypeHelp True) args)
