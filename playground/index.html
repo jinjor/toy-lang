@@ -31,7 +31,6 @@
     }
 
     function log(s) {
-      console.log(s);
       result = result + s + '\n';
       document.getElementById('result').textContent = result;
     }
@@ -40,16 +39,19 @@
       var editor = ace.edit('editor');
       editor.setTheme("ace/theme/monokai");
       editor.getSession().setMode("ace/mode/elm");
-      editor.commands.addCommand({
-        name: 'compile',
-        bindKey: {
-          win: 'Ctrl-s',
-          mac: 'Command-s'
-        },
-        exec: _ => {
-          compile(editor.getValue());
-        }
+      editor.on('change', () => {
+        compile(editor.getValue());
       });
+      // editor.commands.addCommand({
+      //   name: 'compile',
+      //   bindKey: {
+      //     win: 'Ctrl-s',
+      //     mac: 'Command-s'
+      //   },
+      //   exec: _ => {
+      //     compile(editor.getValue());
+      //   }
+      // });
       editor.getSession().on('change', () => {
         localStorage.setItem('toy.playground.source', editor.getValue());
       });
@@ -57,11 +59,10 @@
       if (source) {
         editor.setValue(source);
       }
-      document.getElementById('compile').addEventListener('click', e => {
-        e.preventDefault();
-        compile(editor.getValue());
-      });
-
+      // document.getElementById('compile').addEventListener('click', e => {
+      //   e.preventDefault();
+      //   compile(editor.getValue());
+      // });
       parser.ports.parsed.subscribe(mes => {
         // log(mes);
       });
@@ -85,11 +86,21 @@
         interfaces.forEach(a => {
           log(a);
         });
+        Object.keys(editor.getSession().getMarkers(true)).forEach(id => {
+          editor.getSession().removeMarker(id);
+        });
+
         const annotations = errors.map(e => {
           const splitted = e.split(' ');
+          const startRow = +splitted[0].split(':')[0] - 1;
+          const startCol = +splitted[0].split(':')[1] - 1;
+          const endRow = +splitted[1].split(':')[0] - 1;
+          const endCol = +splitted[1].split(':')[1] - 1;
+          var Range = ace.require("ace/range").Range;
+          editor.session.addMarker(new Range(startRow, startCol, endRow, endCol), "error_range", "background", true);
           return {
-            row: +splitted[0].split(':')[0] - 1,
-            column: +splitted[0].split(':')[1] - 1,
+            row: startRow,
+            column: startCol,
             text: splitted.slice(2).join(' '),
             type: 'error'
           };
