@@ -105,38 +105,24 @@ collectErrors typedDict =
 
 addTypeUntilEnd : Variables -> Variables
 addTypeUntilEnd dict =
-    let
-        target =
-            dict
-                |> Dict.filter (\key v -> v.type_ == Nothing && v.errors == [])
-                |> Dict.values
-                |> List.head
-    in
-        case target of
-            Just v ->
-                let
-                    range =
-                        case v.exp of
-                            Just exp ->
-                                exp.range
+    dict
+        |> Dict.filter (\key v -> v.type_ == Nothing && v.errors == [])
+        |> Dict.values
+        |> List.head
+        |> Maybe.map
+            (\v ->
+                (case lookupTypeForInterfaceHelp dict v of
+                    Err e ->
+                        dict
+                            |> Dict.insert v.id { v | errors = e :: v.errors }
 
-                            _ ->
-                                Range (Position -1 -1) (Position -1 -1)
-                in
-                    case lookupTypeForInterface dict v.id range of
-                        Err e ->
-                            dict
-                                |> Dict.insert v.id
-                                    { v | errors = e :: v.errors }
-                                |> addTypeUntilEnd
-
-                        Ok ( typeExp, newDict ) ->
-                            newDict
-                                |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
-                                |> addTypeUntilEnd
-
-            _ ->
-                dict
+                    Ok ( typeExp, newDict ) ->
+                        newDict
+                            |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
+                )
+                    |> addTypeUntilEnd
+            )
+        |> Maybe.withDefault dict
 
 
 lookupTypeForInterface : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
@@ -146,19 +132,24 @@ lookupTypeForInterface dict id range =
             Err ( range, VariableNotDefined id )
 
         Just v ->
-            case ( v.type_, v.exp ) of
-                ( Nothing, Just exp ) ->
-                    lookupTypeForExpression dict exp
-                        |> Result.map
-                            (\( type_, newDict ) ->
-                                ( type_, addCheckedType v type_ newDict )
-                            )
+            lookupTypeForInterfaceHelp dict v
 
-                ( Just ( type_, _ ), _ ) ->
-                    Ok ( type_, dict )
 
-                ( Nothing, Nothing ) ->
-                    Debug.crash "arienai"
+lookupTypeForInterfaceHelp : Variables -> Variable -> Result Error ( TypeExp, Variables )
+lookupTypeForInterfaceHelp dict v =
+    case ( v.type_, v.exp ) of
+        ( Nothing, Just exp ) ->
+            lookupTypeForExpression dict exp
+                |> Result.map
+                    (\( type_, newDict ) ->
+                        ( type_, addCheckedType v type_ newDict )
+                    )
+
+        ( Just ( type_, _ ), _ ) ->
+            Ok ( type_, dict )
+
+        ( Nothing, Nothing ) ->
+            Debug.crash "arienai"
 
 
 applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
