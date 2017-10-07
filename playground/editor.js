@@ -14,11 +14,18 @@ function log(s) {
 function compile(source) {
   resetLogBuffer()
   let start = Date.now();
-  parser.ports.parse.send(source);
+  parser.ports.parse.send(source + '\n');
 }
 
 setTimeout(() => {
-  var editor = ace.edit('editor');
+  const source = localStorage.getItem('toy.playground.source');
+  const editorElement = document.getElementById('editor');
+  editorElement.textContent = source || 'main : String\nmain = "hello, world"\n';
+  var editor = ace.edit(editorElement);
+  setTimeout(() => {
+    editorElement.classList.add('ready');
+  }, 50);
+
   editor.setTheme("ace/theme/monokai");
   editor.getSession().setMode("ace/mode/elm");
   editor.on('change', () => {
@@ -27,12 +34,6 @@ setTimeout(() => {
   editor.getSession().on('change', () => {
     localStorage.setItem('toy.playground.source', editor.getValue());
   });
-  const source = localStorage.getItem('toy.playground.source');
-  if (source) {
-    editor.setValue(source);
-  } else {
-    editor.setValue('main : String\nmain = "hello, world"\n');
-  }
   parser.ports.parsed.subscribe(mes => {
     // log(mes);
   });

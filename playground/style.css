@@ -46,10 +46,17 @@ body {
   width: 100%;
   height: calc(100% - 30px);
   bottom: 0;
+  background-color: #000;
 }
 
 .editor {
   width: 50%;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.editor.ready {
+  opacity: 1;
 }
 
 .error_range {
