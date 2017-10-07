@@ -114,7 +114,7 @@ addTypeUntilEnd dict =
     in
         case target of
             Just v ->
-                case lookupType dict v.id (Range (Position -1 -1) (Position -1 -1)) [] of
+                case lookupTypeForInterface dict v.id (Range (Position -1 -1) (Position -1 -1)) of
                     Err e ->
                         dict
                             |> Dict.insert v.id
@@ -130,34 +130,26 @@ addTypeUntilEnd dict =
                 dict
 
 
-lookupType : Variables -> Identifier -> Range -> List (Pos Expression) -> Result Error ( TypeExp, Variables )
-lookupType dict id range tail =
+lookupTypeForInterface : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
+lookupTypeForInterface dict id range =
     case Dict.get id dict of
         Nothing ->
             Err ( range, VariableNotDefined id )
 
         Just v ->
-            let
-                result =
-                    case ( v.type_, v.exp ) of
-                        ( Nothing, Just exp ) ->
-                            lookupTypeForExpression dict exp
-                                |> Result.map
-                                    (\( type_, newDict ) ->
-                                        ( type_, addCheckedType v type_ newDict )
-                                    )
+            case ( v.type_, v.exp ) of
+                ( Nothing, Just exp ) ->
+                    lookupTypeForExpression dict exp
+                        |> Result.map
+                            (\( type_, newDict ) ->
+                                ( type_, addCheckedType v type_ newDict )
+                            )
 
-                        ( Just ( type_, _ ), _ ) ->
-                            Ok ( type_, dict )
+                ( Just ( type_, _ ), _ ) ->
+                    Ok ( type_, dict )
 
-                        ( Nothing, Nothing ) ->
-                            Debug.crash "arienai"
-            in
-                result
-                    |> Result.andThen
-                        (\( type_, newDict ) ->
-                            lookupTypeForExpressions newDict type_ tail
-                        )
+                ( Nothing, Nothing ) ->
+                    Debug.crash "arienai"
 
 
 lookupTypeForExpressions :
@@ -211,7 +203,11 @@ lookupTypeForExpression dict exp =
             Ok ( TypeValue "String" [], dict )
 
         Ref id tail ->
-            lookupType dict id exp.range tail
+            lookupTypeForInterface dict id exp.range
+                |> Result.andThen
+                    (\( type_, newDict ) ->
+                        lookupTypeForExpressions newDict type_ tail
+                    )
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables
