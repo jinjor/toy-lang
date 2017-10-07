@@ -1,6 +1,7 @@
 module Toy.Checker exposing (..)
 
 import Toy.Parser exposing (..)
+import Toy.Formatter as Formatter
 import Dict exposing (Dict)
 
 
@@ -52,47 +53,7 @@ check module_ =
 
 formatInterface : Variable -> String
 formatInterface v =
-    let
-        typeString =
-            case v.type_ of
-                Just ( t, _ ) ->
-                    formatType t
-
-                Nothing ->
-                    "?"
-    in
-        v.id ++ " : " ++ typeString
-
-
-formatType : TypeExp -> String
-formatType =
-    formatTypeHelp False
-
-
-formatTypeHelp : Bool -> TypeExp -> String
-formatTypeHelp paren type_ =
-    case type_ of
-        ArrowType head tail ->
-            case tail of
-                Just t ->
-                    (formatTypeHelp False head ++ " -> " ++ formatTypeHelp False t)
-                        |> parenIf paren
-
-                Nothing ->
-                    formatTypeHelp False head
-
-        TypeValue constructor args ->
-            (constructor :: List.map (formatTypeHelp True) args)
-                |> String.join " "
-                |> parenIf (paren && args /= [])
-
-
-parenIf : Bool -> String -> String
-parenIf condition s =
-    if condition then
-        "(" ++ s ++ ")"
-    else
-        s
+    Formatter.formatInterface v.id (Maybe.map Tuple.first v.type_)
 
 
 formatError : String -> Error -> String
@@ -127,9 +88,9 @@ formatErrorType e =
 
         TypeMismatch expected actual ->
             "expected type "
-                ++ formatType expected
+                ++ Formatter.formatType expected
                 ++ " but got type "
-                ++ formatType actual
+                ++ Formatter.formatType actual
 
         TooManyArguments ->
             "too many arguments"
