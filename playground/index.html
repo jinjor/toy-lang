@@ -23,16 +23,19 @@
 
     let result = '';
 
-    function compile(source) {
+    function resetLogBuffer() {
       result = '';
-      document.getElementById('result').textContent = '';
-      let start = Date.now();
-      parser.ports.parse.send(source);
     }
 
     function log(s) {
       result = result + s + '\n';
       document.getElementById('result').textContent = result;
+    }
+
+    function compile(source) {
+      resetLogBuffer()
+      let start = Date.now();
+      parser.ports.parse.send(source);
     }
 
     setTimeout(() => {
@@ -80,12 +83,8 @@
       parser.ports.checked.subscribe(mes => {
         const errors = mes[0];
         const interfaces = mes[1];
-        errors.forEach(e => {
-          log(e);
-        });
-        interfaces.forEach(a => {
-          log(a);
-        });
+        resetLogBuffer();
+        log([errors.join('\n'), interfaces.join('\n')].join('\n'));
         Object.keys(editor.getSession().getMarkers(true)).forEach(id => {
           editor.getSession().removeMarker(id);
         });
