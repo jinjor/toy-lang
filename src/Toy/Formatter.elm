@@ -23,21 +23,23 @@ formatType =
 
 
 formatTypeHelp : Bool -> TypeExp -> String
-formatTypeHelp paren type_ =
+formatTypeHelp isArg type_ =
     case type_ of
         ArrowType head tail ->
-            case tail of
-                Just t ->
-                    (formatTypeHelp False head ++ " -> " ++ formatTypeHelp False t)
-                        |> parenIf paren
+            formatTypeHelp False head
+                ++ (case tail of
+                        Just t ->
+                            " -> " ++ formatTypeHelp False t
 
-                Nothing ->
-                    formatTypeHelp False head
+                        Nothing ->
+                            ""
+                   )
+                |> parenIf isArg
 
         TypeValue constructor args ->
             (constructor :: List.map (formatTypeHelp True) args)
                 |> String.join " "
-                |> parenIf (paren && args /= [])
+                |> parenIf (isArg && args /= [])
 
 
 parenIf : Bool -> String -> String

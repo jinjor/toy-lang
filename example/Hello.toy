@@ -30,3 +30,5 @@ n : List Foo -> Bar
 o = n 1
 
 p : List (Number -> List (Int -> String) String) -> List (Int)
+
+q : List (List String)
