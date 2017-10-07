@@ -190,6 +190,7 @@ expression =
         oneOf
             [ lazy (\_ -> ref)
             , positioned number
+            , positioned string
             ]
 
 
@@ -223,6 +224,17 @@ number =
                 [ map toString int
                 , map toString float
                 ]
+
+
+string : Parser Expression
+string =
+    inContext "string" <|
+        succeed StringLiteral
+            |. symbol "\""
+            |= (source <|
+                    ignore zeroOrMore (\c -> c /= '"')
+               )
+            |. symbol "\""
 
 
 spaces : Parser ()
