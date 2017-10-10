@@ -30,23 +30,18 @@ type ErrorType
     | TooManyArguments
 
 
-check : Module -> ( List String, List String )
+check : Module -> ( List Error, List Variable )
 check module_ =
     let
         dict =
             makeVariables module_
 
-        typed =
+        interfaces =
             addTypeUntilEnd dict
+                |> Dict.values
 
         errors =
-            collectErrors typed
-                |> List.map (formatError "")
-
-        interfaces =
-            typed
-                |> Dict.values
-                |> List.map formatInterface
+            collectErrors interfaces
     in
         ( errors, interfaces )
 
@@ -56,8 +51,8 @@ formatInterface v =
     Formatter.formatInterface v.id (Maybe.map Tuple.first v.type_)
 
 
-formatError : String -> Error -> String
-formatError source ( range, e ) =
+formatError : Error -> String
+formatError ( range, e ) =
     formatRange range ++ " " ++ formatErrorType e
 
 
@@ -96,10 +91,9 @@ formatErrorType e =
             "too many arguments"
 
 
-collectErrors : Variables -> List Error
-collectErrors typedDict =
-    typedDict
-        |> Dict.values
+collectErrors : List Variable -> List Error
+collectErrors variables =
+    variables
         |> List.concatMap .errors
 
 

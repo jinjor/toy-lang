@@ -4,6 +4,8 @@ import Json.Decode as D
 import Json.Encode as E
 import Toy.Parser as ToyParser
 import Toy.Checker as ToyChecker
+import Toy.Generator as ToyGenerator
+import Toy.Translator as ToyTranslator
 import Parser
 import Task
 
@@ -33,6 +35,9 @@ port parsed : String -> Cmd msg
 port checked : ( List String, List String ) -> Cmd msg
 
 
+port generated : String -> Cmd msg
+
+
 port err : String -> Cmd msg
 
 
@@ -56,6 +61,7 @@ init =
 type Msg
     = Parse String
     | Check ToyParser.Module
+    | Generate (List ToyChecker.Variable)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -76,7 +82,28 @@ update msg model =
 
         Check module_ ->
             ( model
-            , checked (ToyChecker.check module_)
+            , let
+                ( errors, interfaces ) =
+                    ToyChecker.check module_
+              in
+                Cmd.batch
+                    [ if errors == [] then
+                        (Task.succeed (Generate interfaces) |> Task.perform identity)
+                      else
+                        Cmd.none
+                    , checked
+                        ( List.map ToyChecker.formatError errors
+                        , List.map ToyChecker.formatInterface interfaces
+                        )
+                    ]
+            )
+
+        Generate interfaces ->
+            ( model
+            , interfaces
+                |> ToyTranslator.translateModule
+                |> ToyGenerator.generateModule
+                |> generated
             )
 
 

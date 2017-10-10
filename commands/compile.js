@@ -14,6 +14,12 @@ const args = argv.option({
   type: 'string',
   description: 'pass code directly',
   example: `'toy compile -c "a = 1"'`
+}).option({
+  name: 'output',
+  short: 'o',
+  type: 'string',
+  description: 'output js file',
+  example: `'toy compile Main.toy -o index.js'`
 }).run();
 
 // console.log(args);
@@ -91,6 +97,16 @@ getSource().then(source => {
     });
     console.log('took ' + (Date.now() - start) + '[ms] to check');
     saveInterface();
+  });
+  parser.ports.generated.subscribe(code => {
+    console.log('took ' + (Date.now() - start) + '[ms] to generate');
+    start = Date.now();
+    if (args.options.output) {
+      const file = args.options.output;
+      fs.writeFileSync(file, code);
+    } else {
+      console.log(code);
+    }
   });
   parser.ports.err.subscribe(mes => {
     console.log('error!');
