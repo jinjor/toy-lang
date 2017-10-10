@@ -52,4 +52,4 @@ translateExpression maybeExp =
 
 fullId : String -> String
 fullId id =
-    "user$project$Main$" ++ id
+    "Main$" ++ id
