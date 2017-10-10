@@ -111,7 +111,7 @@ addTypeUntilEnd dict =
         |> List.head
         |> Maybe.map
             (\v ->
-                (case lookupTypeForInterfaceHelp dict v of
+                (case lookupTypeForInterface dict v of
                     Err e ->
                         dict
                             |> Dict.insert v.id { v | errors = e :: v.errors }
@@ -125,18 +125,8 @@ addTypeUntilEnd dict =
         |> Maybe.withDefault dict
 
 
-lookupTypeForInterface : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
-lookupTypeForInterface dict id range =
-    case Dict.get id dict of
-        Nothing ->
-            Err ( range, VariableNotDefined id )
-
-        Just v ->
-            lookupTypeForInterfaceHelp dict v
-
-
-lookupTypeForInterfaceHelp : Variables -> Variable -> Result Error ( TypeExp, Variables )
-lookupTypeForInterfaceHelp dict v =
+lookupTypeForInterface : Variables -> Variable -> Result Error ( TypeExp, Variables )
+lookupTypeForInterface dict v =
     case ( v.type_, v.exp ) of
         ( Nothing, Just exp ) ->
             lookupTypeForExpression dict exp
@@ -180,11 +170,21 @@ lookupTypeForExpression dict exp =
             Ok ( TypeValue "String" [], dict )
 
         Ref id tail ->
-            lookupTypeForInterface dict id exp.range
+            lookupTypeForRef dict id exp.range
                 |> Result.andThen
                     (\( type_, newDict ) ->
                         lookupTypeForExpressionTail newDict exp.range type_ tail
                     )
+
+
+lookupTypeForRef : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
+lookupTypeForRef dict id range =
+    case Dict.get id dict of
+        Nothing ->
+            Err ( range, VariableNotDefined id )
+
+        Just v ->
+            lookupTypeForInterface dict v
 
 
 lookupTypeForExpressionTail :
