@@ -24,6 +24,9 @@ setTimeout(() => {
   var editor = ace.edit(editorElement);
   setTimeout(() => {
     editorElement.classList.add('ready');
+    if (editor.getValue().trim() !== '') {
+      compile(editor.getValue());
+    }
   }, 50);
 
   editor.setTheme("ace/theme/monokai");
@@ -36,17 +39,6 @@ setTimeout(() => {
   });
   parser.ports.parsed.subscribe(mes => {
     // log(mes);
-  });
-  parser.ports.err.subscribe(e => {
-    log(e);
-    const splitted = e.split(' ');
-    const annotations = [{
-      row: +splitted[0].split(':')[0] - 1,
-      column: +splitted[0].split(':')[1] - 1,
-      text: splitted.slice(1).join(' '),
-      type: 'error'
-    }];
-    editor.getSession().setAnnotations(annotations);
   });
   parser.ports.checked.subscribe(mes => {
     const errors = mes[0];
@@ -72,6 +64,21 @@ setTimeout(() => {
         type: 'error'
       };
     });
+    editor.getSession().setAnnotations(annotations);
+  });
+  parser.ports.generated.subscribe(code => {
+    resetLogBuffer();
+    log(code);
+  });
+  parser.ports.err.subscribe(e => {
+    log(e);
+    const splitted = e.split(' ');
+    const annotations = [{
+      row: +splitted[0].split(':')[0] - 1,
+      column: +splitted[0].split(':')[1] - 1,
+      text: splitted.slice(1).join(' '),
+      type: 'error'
+    }];
     editor.getSession().setAnnotations(annotations);
   });
 });
