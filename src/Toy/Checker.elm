@@ -1,7 +1,6 @@
 module Toy.Checker exposing (..)
 
 import Toy.Parser exposing (..)
-import Toy.Formatter as Formatter
 import Dict exposing (Dict)
 
 
@@ -44,51 +43,6 @@ check module_ =
             collectErrors interfaces
     in
         ( errors, interfaces )
-
-
-formatInterface : Variable -> String
-formatInterface v =
-    Formatter.formatInterface v.id (Maybe.map Tuple.first v.type_)
-
-
-formatError : Error -> String
-formatError ( range, e ) =
-    formatRange range ++ " " ++ formatErrorType e
-
-
-formatRange : Range -> String
-formatRange range =
-    formatPosition range.start ++ " " ++ formatPosition range.end
-
-
-formatPosition : Position -> String
-formatPosition pos =
-    toString pos.row ++ ":" ++ toString pos.col
-
-
-formatErrorType : ErrorType -> String
-formatErrorType e =
-    case e of
-        VariableNotDefined id ->
-            id ++ " is not defined"
-
-        VariableDuplicated id ->
-            id ++ " is already defined"
-
-        TypeNotDefined name ->
-            "type " ++ name ++ "is not defined"
-
-        TypeDuplicated id ->
-            id ++ " is already typed"
-
-        TypeMismatch expected actual ->
-            "expected type "
-                ++ Formatter.formatType expected
-                ++ " but got type "
-                ++ Formatter.formatType actual
-
-        TooManyArguments ->
-            "too many arguments"
 
 
 collectErrors : List Variable -> List Error

@@ -4,6 +4,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Toy.Parser as ToyParser
 import Toy.Checker as ToyChecker
+import Toy.Formatter as ToyFormatter
 import Toy.Generator as ToyGenerator
 import Toy.Translator as ToyTranslator
 import Parser
@@ -92,8 +93,8 @@ update msg model =
                       else
                         Cmd.none
                     , checked
-                        ( List.map ToyChecker.formatError errors
-                        , List.map ToyChecker.formatInterface interfaces
+                        ( List.map ToyFormatter.formatError errors
+                        , List.map ToyFormatter.formatInterface interfaces
                         )
                     ]
             )
