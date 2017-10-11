@@ -88,14 +88,10 @@ addTypeUntilEndHelp v dict =
                     lookupTypeForExpression dict exp
                         |> Result.andThen
                             (\( type_, newDict ) ->
-                                let
-                                    _ =
-                                        Debug.log "(t, type_)" ( t, type_ )
-                                in
-                                    if t == type_ then
-                                        Ok ( type_, addCheckedType v type_ newDict )
-                                    else
-                                        Err ( exp.range, TypeSignatureMismatch t type_ )
+                                if t == type_ then
+                                    Ok ( type_, addCheckedType v type_ newDict )
+                                else
+                                    Err ( exp.range, TypeSignatureMismatch t type_ )
                             )
 
                 ( Just ( t, True ), Just exp ) ->
@@ -138,15 +134,10 @@ applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
 applyType t1 t2 =
     case t1 of
         ArrowType head tail ->
-            case tail of
-                Just t ->
-                    if head == t2 then
-                        Ok t
-                    else
-                        Err (TypeMismatch head t2)
-
-                Nothing ->
-                    Err TooManyArguments
+            if head == t2 then
+                Ok tail
+            else
+                Err (TypeMismatch head t2)
 
         TypeValue _ _ ->
             Err TooManyArguments

@@ -37,7 +37,7 @@ type alias Identifier =
 
 
 type TypeExp
-    = ArrowType TypeExp (Maybe TypeExp)
+    = ArrowType TypeExp TypeExp
     | TypeValue TypeConstructor (List TypeExp)
 
 
@@ -111,14 +111,14 @@ typeExp =
         (lazy (\_ -> singleTypeExp)
             |> andThen
                 (\head ->
-                    succeed (ArrowType head)
+                    succeed identity
                         |. spaces
                         |= oneOf
-                            [ succeed Just
+                            [ succeed (ArrowType head)
                                 |. symbol "->"
                                 |. spaces
                                 |= lazy (\_ -> typeExp)
-                            , succeed Nothing
+                            , succeed head
                             ]
                 )
         )
