@@ -76,32 +76,32 @@ addTypeUntilEndHelp : Variable -> Variables -> Variables
 addTypeUntilEndHelp v dict =
     let
         result =
-            case ( v.type_, v.exp ) of
-                ( Nothing, Just exp ) ->
-                    lookupTypeForExpression dict exp
-                        |> Result.map
-                            (\( type_, newDict ) ->
-                                ( type_, addCheckedType v type_ newDict )
-                            )
-
-                ( Just ( t, False ), Just exp ) ->
+            case v.exp of
+                Just exp ->
                     lookupTypeForExpression dict exp
                         |> Result.andThen
                             (\( type_, newDict ) ->
-                                if t == type_ then
-                                    Ok ( type_, addCheckedType v type_ newDict )
-                                else
-                                    Err ( exp.range, TypeSignatureMismatch t type_ )
+                                case v.type_ of
+                                    Nothing ->
+                                        Ok ( type_, addCheckedType v type_ newDict )
+
+                                    Just ( t, False ) ->
+                                        if t == type_ then
+                                            Ok ( type_, addCheckedType v type_ newDict )
+                                        else
+                                            Err ( exp.range, TypeSignatureMismatch t type_ )
+
+                                    Just ( t, True ) ->
+                                        Debug.crash "this should be already filtered out"
                             )
 
-                ( Just ( t, True ), Just exp ) ->
-                    Debug.crash "this should be already filtered out"
+                Nothing ->
+                    case v.type_ of
+                        Just _ ->
+                            Err ( Range (Position -1 -1) (Position -1 -1), NoImplementation v.id )
 
-                ( Just ( t, _ ), Nothing ) ->
-                    Err ( Range (Position -1 -1) (Position -1 -1), NoImplementation v.id )
-
-                ( Nothing, Nothing ) ->
-                    Debug.crash "arienai"
+                        Nothing ->
+                            Debug.crash "arienai"
     in
         case result of
             Err e ->
