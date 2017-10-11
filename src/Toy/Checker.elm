@@ -12,8 +12,8 @@ type alias Variable =
     }
 
 
-type alias Variables =
-    Dict Identifier Variable
+type Variables
+    = Variables (Dict Identifier Variable) (Maybe Variables)
 
 
 type alias Error =
@@ -35,7 +35,7 @@ check : Module -> ( List Error, List Variable )
 check module_ =
     let
         dict =
-            makeVariables module_
+            makeVarDict module_
 
         interfaces =
             addTypeUntilEnd dict
@@ -53,7 +53,7 @@ collectErrors variables =
         |> List.concatMap .errors
 
 
-addTypeUntilEnd : Variables -> Variables
+addTypeUntilEnd : Dict Identifier Variable -> Dict Identifier Variable
 addTypeUntilEnd dict =
     dict
         |> Dict.values
@@ -72,22 +72,22 @@ addTypeUntilEnd dict =
         |> Maybe.withDefault dict
 
 
-addTypeUntilEndHelp : Variable -> Variables -> Variables
+addTypeUntilEndHelp : Variable -> Dict Identifier Variable -> Dict Identifier Variable
 addTypeUntilEndHelp v dict =
     let
         result =
             case v.exp of
                 Just exp ->
-                    lookupTypeForExpression dict exp
+                    lookupTypeForExpression (Variables dict Nothing) exp
                         |> Result.andThen
-                            (\( type_, newDict ) ->
+                            (\( type_, newVars ) ->
                                 case v.type_ of
                                     Nothing ->
-                                        Ok ( type_, addCheckedType v type_ newDict )
+                                        Ok ( type_, addCheckedType v type_ newVars )
 
                                     Just ( t, False ) ->
                                         if t == type_ then
-                                            Ok ( type_, addCheckedType v type_ newDict )
+                                            Ok ( type_, addCheckedType v type_ newVars )
                                         else
                                             Err ( exp.range, TypeSignatureMismatch t type_ )
 
@@ -110,37 +110,38 @@ addTypeUntilEndHelp v dict =
 
             Ok ( type_, newDict ) ->
                 newDict
-                    |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
+                    |> addCheckedType v type_
+                    |> (\(Variables dict _) -> dict)
 
 
 lookupTypeForInterface : Variables -> Variable -> Result Error ( TypeExp, Variables )
-lookupTypeForInterface dict v =
+lookupTypeForInterface vars v =
     case ( v.type_, v.exp ) of
         ( Nothing, Just exp ) ->
-            lookupTypeForExpression dict exp
+            lookupTypeForExpression vars exp
                 |> Result.map
-                    (\( type_, newDict ) ->
-                        ( type_, addCheckedType v type_ newDict )
+                    (\( type_, newVars ) ->
+                        ( type_, addCheckedType v type_ newVars )
                     )
 
         ( Just ( type_, _ ), _ ) ->
-            Ok ( type_, dict )
+            Ok ( type_, vars )
 
         ( Nothing, Nothing ) ->
             Debug.crash "arienai"
 
 
 lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
-lookupTypeForExpression dict exp =
+lookupTypeForExpression vars exp =
     case exp.content of
         NumberLiteral s ->
-            Ok ( TypeValue "Number" [], dict )
+            Ok ( TypeValue "Number" [], vars )
 
         StringLiteral s ->
-            Ok ( TypeValue "String" [], dict )
+            Ok ( TypeValue "String" [], vars )
 
         Lambda argName exp ->
-            lookupTypeForExpression dict exp
+            lookupTypeForExpression vars exp
 
         Call first next ->
             lookupTypeForExpression dict first
@@ -173,23 +174,37 @@ applyType t1 t2 =
 
 
 lookupTypeForRef : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
-lookupTypeForRef dict id range =
+lookupTypeForRef (Variables dict tail) id range =
     case Dict.get id dict of
         Nothing ->
-            Err ( range, VariableNotDefined id )
+            case tail of
+                Just vars ->
+                    lookupTypeForRef vars id range
+                        |> Result.map
+                            (Tuple.mapSecond
+                                (\newTail ->
+                                    Variables dict (Just newTail)
+                                )
+                            )
+
+                Nothing ->
+                    Err ( range, VariableNotDefined id )
 
         Just v ->
-            lookupTypeForInterface dict v
+            lookupTypeForInterface (Variables dict tail) v
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables
-addCheckedType v type_ dict =
-    dict
-        |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
+addCheckedType v type_ (Variables dict tail) =
+    Variables
+        (dict
+            |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
+        )
+        tail
 
 
-makeVariables : Module -> Variables
-makeVariables (Module statements) =
+makeVarDict : Module -> Dict Identifier Variable
+makeVarDict (Module statements) =
     statements
         |> List.foldl
             (\statement dict ->
@@ -206,8 +221,8 @@ makeVariables (Module statements) =
 updateByAssignment :
     Pos Identifier
     -> Pos Expression
-    -> Variables
-    -> Variables
+    -> Dict Identifier Variable
+    -> Dict Identifier Variable
 updateByAssignment id exp dict =
     dict
         |> Dict.update id.content
@@ -228,8 +243,8 @@ updateByTypeSignature :
     Range
     -> Identifier
     -> Pos TypeExp
-    -> Variables
-    -> Variables
+    -> Dict Identifier Variable
+    -> Dict Identifier Variable
 updateByTypeSignature statementRange id typeExp dict =
     dict
         |> Dict.update id
