@@ -35,7 +35,7 @@ check : Module -> ( List Error, List Variable )
 check module_ =
     let
         dict =
-            makeVarDict module_
+            makeVarDictFromModule module_
 
         interfaces =
             addTypeUntilEnd dict
@@ -203,8 +203,13 @@ addCheckedType v type_ (Variables dict tail) =
         tail
 
 
-makeVarDict : Module -> Dict Identifier Variable
-makeVarDict (Module statements) =
+makeVarDictFromModule : Module -> Dict Identifier Variable
+makeVarDictFromModule (Module statements) =
+    makeVarDict [] statements
+
+
+makeVarDict : List String -> List (Pos Statement) -> Dict Identifier Variable
+makeVarDict argNames statements =
     statements
         |> List.foldl
             (\statement dict ->
@@ -215,7 +220,14 @@ makeVarDict (Module statements) =
                     TypeSignature id typeExp ->
                         updateByTypeSignature statement.range id typeExp dict
             )
-            Dict.empty
+            (Dict.fromList
+                (List.map
+                    (\id ->
+                        ( id, Variable id Nothing Nothing [] )
+                    )
+                    argNames
+                )
+            )
 
 
 updateByAssignment :
