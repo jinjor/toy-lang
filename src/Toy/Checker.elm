@@ -27,6 +27,8 @@ type ErrorType
     | TypeDuplicated Identifier
     | TypeMismatch TypeExp TypeExp
     | TooManyArguments
+    | NoImplementation Identifier
+    | TypeSignatureMismatch TypeExp TypeExp
 
 
 check : Module -> ( List Error, List Variable )
@@ -54,23 +56,65 @@ collectErrors variables =
 addTypeUntilEnd : Variables -> Variables
 addTypeUntilEnd dict =
     dict
-        |> Dict.filter (\key v -> v.type_ == Nothing && v.errors == [])
         |> Dict.values
-        |> List.head
-        |> Maybe.map
+        |> List.filter (\v -> v.errors == [])
+        |> List.filter
             (\v ->
-                (case lookupTypeForInterface dict v of
-                    Err e ->
-                        dict
-                            |> Dict.insert v.id { v | errors = e :: v.errors }
+                case v.type_ of
+                    Just ( _, True ) ->
+                        False
 
-                    Ok ( typeExp, newDict ) ->
-                        newDict
-                            |> Dict.insert v.id { v | type_ = Just ( typeExp, True ) }
-                )
-                    |> addTypeUntilEnd
+                    _ ->
+                        True
             )
+        |> List.head
+        |> Maybe.map (\v -> addTypeUntilEndHelp v dict |> addTypeUntilEnd)
         |> Maybe.withDefault dict
+
+
+addTypeUntilEndHelp : Variable -> Variables -> Variables
+addTypeUntilEndHelp v dict =
+    let
+        result =
+            case ( v.type_, v.exp ) of
+                ( Nothing, Just exp ) ->
+                    lookupTypeForExpression dict exp
+                        |> Result.map
+                            (\( type_, newDict ) ->
+                                ( type_, addCheckedType v type_ newDict )
+                            )
+
+                ( Just ( t, False ), Just exp ) ->
+                    lookupTypeForExpression dict exp
+                        |> Result.andThen
+                            (\( type_, newDict ) ->
+                                let
+                                    _ =
+                                        Debug.log "(t, type_)" ( t, type_ )
+                                in
+                                    if t == type_ then
+                                        Ok ( type_, addCheckedType v type_ newDict )
+                                    else
+                                        Err ( exp.range, TypeSignatureMismatch t type_ )
+                            )
+
+                ( Just ( t, True ), Just exp ) ->
+                    Debug.crash "this should be already filtered out"
+
+                ( Just ( t, _ ), Nothing ) ->
+                    Err ( Range (Position -1 -1) (Position -1 -1), NoImplementation v.id )
+
+                ( Nothing, Nothing ) ->
+                    Debug.crash "arienai"
+    in
+        case result of
+            Err e ->
+                dict
+                    |> Dict.insert v.id { v | errors = e :: v.errors }
+
+            Ok ( type_, newDict ) ->
+                newDict
+                    |> Dict.insert v.id { v | type_ = Just ( type_, True ) }
 
 
 lookupTypeForInterface : Variables -> Variable -> Result Error ( TypeExp, Variables )

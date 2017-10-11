@@ -92,3 +92,12 @@ formatErrorType e =
 
         TooManyArguments ->
             "too many arguments"
+
+        NoImplementation id ->
+            "no implementation found for " ++ id
+
+        TypeSignatureMismatch expected actual ->
+            "type is declared as "
+                ++ formatType expected
+                ++ " but implemantation is type "
+                ++ formatType actual
