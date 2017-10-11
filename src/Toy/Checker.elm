@@ -152,6 +152,9 @@ lookupTypeForExpression dict exp =
         StringLiteral s ->
             Ok ( TypeValue "String" [], dict )
 
+        Lambda argName exp ->
+            lookupTypeForExpression dict exp
+
         Ref id tail ->
             lookupTypeForRef dict id exp.range
                 |> Result.andThen

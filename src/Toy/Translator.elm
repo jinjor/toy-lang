@@ -49,6 +49,9 @@ translateExpression maybeExp =
                         (fullId id)
                         (List.map translateExpression <| List.map Just expressions)
 
+                P.Lambda _ _ ->
+                    Debug.crash "not implemented yet!"
+
 
 fullId : String -> String
 fullId id =

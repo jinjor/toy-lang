@@ -49,6 +49,11 @@ type Expression
     = NumberLiteral String
     | StringLiteral String
     | Ref Identifier (List (Pos Expression))
+    | Lambda Pattern (Pos Expression)
+
+
+type alias Pattern =
+    String
 
 
 module_ : Parser Module
