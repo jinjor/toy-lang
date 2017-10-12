@@ -101,7 +101,7 @@ addTypeUntilEndHelp v dict =
                             Err ( Range (Position -1 -1) (Position -1 -1), NoImplementation v.id )
 
                         Nothing ->
-                            Debug.crash "arienai"
+                            Debug.crash "top level variables must have either type or expression"
     in
         case result of
             Err e ->
@@ -114,23 +114,6 @@ addTypeUntilEndHelp v dict =
                     |> (\(Variables dict _) -> dict)
 
 
-lookupTypeForInterface : Variables -> Variable -> Result Error ( TypeExp, Variables )
-lookupTypeForInterface vars v =
-    case ( v.type_, v.exp ) of
-        ( Nothing, Just exp ) ->
-            lookupTypeForExpression vars exp
-                |> Result.map
-                    (\( type_, newVars ) ->
-                        ( type_, addCheckedType v type_ newVars )
-                    )
-
-        ( Just ( type_, _ ), _ ) ->
-            Ok ( type_, vars )
-
-        ( Nothing, Nothing ) ->
-            Debug.crash "arienai"
-
-
 lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
 lookupTypeForExpression vars exp =
     case exp.content of
@@ -141,7 +124,11 @@ lookupTypeForExpression vars exp =
             Ok ( TypeValue "String" [], vars )
 
         Lambda argName exp ->
-            lookupTypeForExpression vars exp
+            let
+                localDict =
+                    makeVarDict [ argName ] []
+            in
+                lookupTypeForExpression (Variables localDict (Just vars)) exp
 
         Call first next ->
             lookupTypeForExpression dict first
@@ -191,7 +178,19 @@ lookupTypeForRef (Variables dict tail) id range =
                     Err ( range, VariableNotDefined id )
 
         Just v ->
-            lookupTypeForInterface (Variables dict tail) v
+            case ( v.type_, v.exp ) of
+                ( Nothing, Just exp ) ->
+                    lookupTypeForExpression (Variables dict tail) exp
+                        |> Result.map
+                            (\( type_, newVars ) ->
+                                ( type_, addCheckedType v type_ newVars )
+                            )
+
+                ( Just ( type_, _ ), _ ) ->
+                    Ok ( type_, (Variables dict tail) )
+
+                ( Nothing, Nothing ) ->
+                    Debug.crash "not implemented yet -- this is one of lambda args"
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables
