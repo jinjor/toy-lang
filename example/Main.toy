@@ -36,3 +36,5 @@ q : List (List String)
 r = "foooo"
 
 s = l r
+
+t = \str -> l str

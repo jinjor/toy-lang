@@ -50,7 +50,11 @@ type Expression
     | StringLiteral String
     | Ref Identifier
     | Call (Pos Expression) (Pos Expression)
-    | Lambda Pattern (Pos Expression)
+    | Lambda Patterns (Pos Expression)
+
+
+type Patterns
+    = Patterns Pattern (Maybe Patterns)
 
 
 type alias Pattern =
@@ -197,6 +201,7 @@ expression =
             oneOf
                 [ number
                 , string
+                , lambda
                 , succeed makeCall
                     |= positioned ref
                     |. spaces
@@ -228,6 +233,39 @@ functionTail =
                 |= lazy (\_ -> functionTail)
             , succeed []
             ]
+
+
+lambda : Parser Expression
+lambda =
+    inContext "lambda" <|
+        succeed Lambda
+            |. symbol "\\"
+            |= patterns
+            |. spaces
+            |. symbol "->"
+            |. spaces
+            |= lazy (\_ -> expression)
+
+
+patterns : Parser Patterns
+patterns =
+    inContext "patterns" <|
+        succeed Patterns
+            |= pattern
+            |. spaces
+            |= oneOf
+                [ succeed Just
+                    |= lazy (\_ -> patterns)
+                , succeed Nothing
+                ]
+
+
+pattern : Parser Pattern
+pattern =
+    inContext "pattern" <|
+        source <|
+            ignore (Exactly 1) Char.isLower
+                |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
 ref : Parser Expression
