@@ -22,6 +22,7 @@ type JsExpression
     | JsString String
     | JsRef JsIdentifier
     | JsCall JsExpression JsExpression
+    | JsFunction (List String) JsExpression
 
 
 translateModule : List C.Variable -> Module
@@ -56,8 +57,8 @@ translateExpression exp =
         P.Call first second ->
             JsCall (translateExpression first) (translateExpression second)
 
-        P.Lambda _ _ ->
-            Debug.crash "not implemented yet!"
+        P.Lambda patterns exp ->
+            JsFunction (C.patternsToNames patterns) (translateExpression exp)
 
 
 fullId : String -> String

@@ -30,6 +30,9 @@ generateExpression exp =
         JsCall first second ->
             generateExpression first ++ "(" ++ generateExpression second ++ ")"
 
+        JsFunction args exp ->
+            "function (" ++ String.join "," args ++ ") { return " ++ generateExpression exp ++ "; }"
+
 
 generateIdentifier : JsIdentifier -> String
 generateIdentifier id =
