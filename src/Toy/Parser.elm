@@ -193,22 +193,41 @@ identifier =
 expression : Parser (Pos Expression)
 expression =
     inContext "expression" <|
-        (oneOf
-            [ positioned ref
-            , positioned number
-            , positioned string
+        positioned <|
+            oneOf
+                [ number
+                , string
+                , succeed makeCall
+                    |= positioned ref
+                    |. spaces
+                    |= lazy (\_ -> functionTail)
+                ]
+
+
+makeCall : Pos Expression -> List (Pos Expression) -> Expression
+makeCall head tail =
+    case tail of
+        [] ->
+            head.content
+
+        x :: xs ->
+            let
+                range =
+                    Range head.range.start x.range.end
+            in
+                makeCall (Pos range (Call head x)) xs
+
+
+functionTail : Parser (List (Pos Expression))
+functionTail =
+    inContext "function tail" <|
+        oneOf
+            [ succeed (::)
+                |= lazy (\_ -> expression)
+                |. spaces
+                |= lazy (\_ -> functionTail)
+            , succeed []
             ]
-            |> andThen
-                (\head ->
-                    oneOf
-                        [ positioned <|
-                            succeed (Call head)
-                                |. spaces1
-                                |= lazy (\_ -> expression)
-                        , succeed head
-                        ]
-                )
-        )
 
 
 ref : Parser Expression
