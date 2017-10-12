@@ -24,15 +24,13 @@ generateExpression exp =
         JsString str ->
             "\"" ++ str ++ "\""
 
-        JsRef id args ->
-            generateIdentifier id ++ String.join "" (List.map generateArg args)
+        JsRef id ->
+            generateIdentifier id
+
+        JsCall first second ->
+            generateExpression first ++ "(" ++ generateExpression second ++ ")"
 
 
 generateIdentifier : JsIdentifier -> String
 generateIdentifier id =
     id
-
-
-generateArg : JsExpression -> String
-generateArg arg =
-    "(" ++ generateExpression arg ++ ")"

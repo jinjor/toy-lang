@@ -130,6 +130,35 @@ lookupTypeForInterface dict v =
             Debug.crash "arienai"
 
 
+lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
+lookupTypeForExpression dict exp =
+    case exp.content of
+        NumberLiteral s ->
+            Ok ( TypeValue "Number" [], dict )
+
+        StringLiteral s ->
+            Ok ( TypeValue "String" [], dict )
+
+        Lambda argName exp ->
+            lookupTypeForExpression dict exp
+
+        Call first next ->
+            lookupTypeForExpression dict first
+                |> Result.andThen
+                    (\( funcType, dict1 ) ->
+                        lookupTypeForExpression dict1 next
+                            |> Result.andThen
+                                (\( argType, dict2 ) ->
+                                    applyType funcType argType
+                                        |> Result.mapError (\e -> ( exp.range, e ))
+                                        |> Result.map (\t -> ( t, dict2 ))
+                                )
+                    )
+
+        Ref id ->
+            lookupTypeForRef dict id exp.range
+
+
 applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
 applyType t1 t2 =
     case t1 of
@@ -143,26 +172,6 @@ applyType t1 t2 =
             Err TooManyArguments
 
 
-lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
-lookupTypeForExpression dict exp =
-    case exp.content of
-        NumberLiteral s ->
-            Ok ( TypeValue "Number" [], dict )
-
-        StringLiteral s ->
-            Ok ( TypeValue "String" [], dict )
-
-        Lambda argName exp ->
-            lookupTypeForExpression dict exp
-
-        Ref id tail ->
-            lookupTypeForRef dict id exp.range
-                |> Result.andThen
-                    (\( type_, newDict ) ->
-                        lookupTypeForExpressionTail newDict exp.range type_ tail
-                    )
-
-
 lookupTypeForRef : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
 lookupTypeForRef dict id range =
     case Dict.get id dict of
@@ -171,30 +180,6 @@ lookupTypeForRef dict id range =
 
         Just v ->
             lookupTypeForInterface dict v
-
-
-lookupTypeForExpressionTail :
-    Variables
-    -> Range
-    -> TypeExp
-    -> List (Pos Expression)
-    -> Result Error ( TypeExp, Variables )
-lookupTypeForExpressionTail dict originalRange type_ tail =
-    case tail of
-        [] ->
-            Ok ( type_, dict )
-
-        firstArg :: tailArgs ->
-            lookupTypeForExpression dict firstArg
-                |> Result.andThen
-                    (\( firstArgType, newDict ) ->
-                        applyType type_ firstArgType
-                            |> Result.mapError (\e -> ( originalRange, e ))
-                            |> Result.andThen
-                                (\nextType ->
-                                    lookupTypeForExpressionTail newDict originalRange nextType tailArgs
-                                )
-                    )
 
 
 addCheckedType : Variable -> TypeExp -> Variables -> Variables

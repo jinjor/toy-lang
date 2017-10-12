@@ -48,7 +48,8 @@ type alias TypeConstructor =
 type Expression
     = NumberLiteral String
     | StringLiteral String
-    | Ref Identifier (List (Pos Expression))
+    | Ref Identifier
+    | Call (Pos Expression) (Pos Expression)
     | Lambda Pattern (Pos Expression)
 
 
@@ -192,33 +193,29 @@ identifier =
 expression : Parser (Pos Expression)
 expression =
     inContext "expression" <|
-        oneOf
-            [ lazy (\_ -> ref)
+        (oneOf
+            [ positioned ref
             , positioned number
             , positioned string
             ]
+            |> andThen
+                (\head ->
+                    oneOf
+                        [ positioned <|
+                            succeed (Call head)
+                                |. spaces1
+                                |= lazy (\_ -> expression)
+                        , succeed head
+                        ]
+                )
+        )
 
 
-ref : Parser (Pos Expression)
+ref : Parser Expression
 ref =
     inContext "ref" <|
-        positioned <|
-            succeed Ref
-                |= identifier
-                |. spaces
-                |= lazy (\_ -> functionTail)
-
-
-functionTail : Parser (List (Pos Expression))
-functionTail =
-    inContext "function tail" <|
-        oneOf
-            [ succeed (::)
-                |= lazy (\_ -> expression)
-                |. spaces
-                |= lazy (\_ -> functionTail)
-            , succeed []
-            ]
+        succeed Ref
+            |= identifier
 
 
 number : Parser Expression
@@ -245,6 +242,11 @@ string =
 spaces : Parser ()
 spaces =
     ignore zeroOrMore (\c -> c == ' ')
+
+
+spaces1 : Parser ()
+spaces1 =
+    ignore oneOrMore (\c -> c == ' ')
 
 
 positioned : Parser a -> Parser (Pos a)

@@ -20,37 +20,44 @@ type alias JsIdentifier =
 type JsExpression
     = JsNumber String
     | JsString String
-    | JsRef JsIdentifier (List JsExpression)
+    | JsRef JsIdentifier
+    | JsCall JsExpression JsExpression
 
 
 translateModule : List C.Variable -> Module
 translateModule interfaces =
     interfaces
-        |> List.map (\v -> JsAssignment (fullId v.id) (translateExpression v.exp))
+        |> List.map (\v -> JsAssignment (fullId v.id) (translateExpressionWrap v.exp))
         |> Module
 
 
-translateExpression : Maybe (P.Pos P.Expression) -> JsExpression
-translateExpression maybeExp =
+translateExpressionWrap : Maybe (P.Pos P.Expression) -> JsExpression
+translateExpressionWrap maybeExp =
     case maybeExp of
         Nothing ->
             Debug.crash "bug in checker"
 
         Just exp ->
-            case exp.content of
-                P.NumberLiteral n ->
-                    JsNumber n
+            translateExpression exp
 
-                P.StringLiteral s ->
-                    JsString s
 
-                P.Ref id expressions ->
-                    JsRef
-                        (fullId id)
-                        (List.map translateExpression <| List.map Just expressions)
+translateExpression : P.Pos P.Expression -> JsExpression
+translateExpression exp =
+    case exp.content of
+        P.NumberLiteral n ->
+            JsNumber n
 
-                P.Lambda _ _ ->
-                    Debug.crash "not implemented yet!"
+        P.StringLiteral s ->
+            JsString s
+
+        P.Ref id ->
+            JsRef (fullId id)
+
+        P.Call first second ->
+            JsCall (translateExpression first) (translateExpression second)
+
+        P.Lambda _ _ ->
+            Debug.crash "not implemented yet!"
 
 
 fullId : String -> String
