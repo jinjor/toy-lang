@@ -123,28 +123,40 @@ lookupTypeForExpression vars exp =
         StringLiteral s ->
             Ok ( TypeValue "String" [], vars )
 
-        Lambda argName exp ->
+        Lambda patterns exp ->
             let
                 localDict =
-                    makeVarDict [ argName ] []
+                    makeVarDict (patternsToNames patterns) []
             in
                 lookupTypeForExpression (Variables localDict (Just vars)) exp
 
         Call first next ->
-            lookupTypeForExpression dict first
+            lookupTypeForExpression vars first
                 |> Result.andThen
-                    (\( funcType, dict1 ) ->
-                        lookupTypeForExpression dict1 next
+                    (\( funcType, vars1 ) ->
+                        lookupTypeForExpression vars1 next
                             |> Result.andThen
-                                (\( argType, dict2 ) ->
+                                (\( argType, vars2 ) ->
                                     applyType funcType argType
                                         |> Result.mapError (\e -> ( exp.range, e ))
-                                        |> Result.map (\t -> ( t, dict2 ))
+                                        |> Result.map (\t -> ( t, vars2 ))
                                 )
                     )
 
         Ref id ->
-            lookupTypeForRef dict id exp.range
+            lookupTypeForRef vars id exp.range
+
+
+patternsToNames : Patterns -> List String
+patternsToNames (Patterns pattern tail) =
+    pattern
+        :: (case tail of
+                Just t ->
+                    patternsToNames t
+
+                Nothing ->
+                    []
+           )
 
 
 applyType : TypeExp -> TypeExp -> Result ErrorType TypeExp
