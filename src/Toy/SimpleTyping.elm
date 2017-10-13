@@ -20,6 +20,7 @@ type Type
     | TypeValue String
     | TypeRef String Int
     | TypeLambda String Int Type
+    | TypeArrow Type Type
     | TypeApply Type Type
 
 
@@ -84,28 +85,44 @@ evaluate env t =
             Ok (env |> Dict.get a |> Maybe.withDefault t)
 
         TypeLambda a typeVarName right ->
-            evaluate (Dict.insert a (TypeVar typeVarName) env) right
-                |> Result.map
-                    (\rightType ->
-                        TypeLambda a typeVarName rightType
+            right
+                |> evaluate
+                    (Dict.union
+                        (Dict.singleton a (TypeVar typeVarName))
+                        env
                     )
+                |> Result.map (TypeLambda a typeVarName)
 
         TypeApply first second ->
             Result.map2 (,) (evaluate env first) (evaluate env second)
                 |> Result.andThen
                     (\( first, second ) ->
-                        apply first second
+                        apply env first second
                     )
+
+        TypeVar id ->
+            Ok (env |> Dict.get (toString id) |> Maybe.withDefault t)
 
         _ ->
             Ok t
 
 
-apply : Type -> Type -> Result String Type
-apply first second =
+apply : Env -> Type -> Type -> Result String Type
+apply env first second =
     case first of
         TypeLambda a typeVarName right ->
-            Debug.crash "not implemented"
+            evaluate
+                (Dict.union
+                    (Dict.singleton (toString typeVarName) second)
+                    env
+                )
+                right
+
+        TypeArrow arg res ->
+            if arg == second then
+                Ok res
+            else
+                Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
 
         TypeValue _ ->
             Err "value cannot take arguments"
@@ -149,20 +166,41 @@ test =
 
 
 {-|
-  01: a
-  02: a
-  03: \a -> b
-  04: \a -> b
-  05: a 1
-  06: a 1
+  01: a -- env={}
+  02: a -- env={ a: Int }
+  03: \a -> b -- env={}
+  04: \a -> b -- env={ b: Int }
+  05: \a -> a -- env={}
+  06: \a -> a -- env={ a: Int }
+  07: a 1 -- env={}
+  08: a 1 -- env={ a: Int }
+  09: (\a -> "") 1 -- env={}
+  10: (\a -> a) 1 -- env={}
+  11: (\a -> a) 1 -- env={ a: String}
+  0x: a 1 -- env={ a: Int -> String }
+  0y: a 1 -- env={ a: String -> Int }
 -}
 examples2 =
     { e01 = test2 (TypeRef "a" 1) Dict.empty
     , e02 = test2 (TypeRef "a" 1) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
     , e03 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) Dict.empty
     , e04 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) (Dict.fromList [ ( "b", TypeValue "Int" ) ])
-    , e05 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) Dict.empty
-    , e06 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e05 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) Dict.empty
+    , e06 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e07 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) Dict.empty
+    , e08 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e09 = test2 (TypeApply (TypeLambda "a" 1 (TypeValue "String")) (TypeValue "Int")) Dict.empty
+    , e10 = test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int")) Dict.empty
+    , e11 =
+        test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "String" ) ])
+    , e0x =
+        test2
+            (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
+            (Dict.fromList [ ( "a", TypeArrow (TypeValue "Int") (TypeValue "String") ) ])
+    , e0y =
+        test2
+            (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
+            (Dict.fromList [ ( "a", TypeArrow (TypeValue "String") (TypeValue "Int") ) ])
     }
 
 
