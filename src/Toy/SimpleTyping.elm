@@ -77,33 +77,41 @@ incr context =
     { context | n = context.n + 1 }
 
 
-evaluate : Env -> Type -> Type
+evaluate : Env -> Type -> Result String Type
 evaluate env t =
     case t of
         TypeRef a typeVarName ->
-            env |> Dict.get a |> Maybe.withDefault t
+            Ok (env |> Dict.get a |> Maybe.withDefault t)
 
         TypeLambda a typeVarName right ->
-            TypeLambda a typeVarName (evaluate (Dict.insert a (TypeVar typeVarName) env) right)
+            evaluate (Dict.insert a (TypeVar typeVarName) env) right
+                |> Result.map
+                    (\rightType ->
+                        TypeLambda a typeVarName rightType
+                    )
 
         TypeApply first second ->
-            apply (evaluate env first) (evaluate env second)
+            Result.map2 (,) (evaluate env first) (evaluate env second)
+                |> Result.andThen
+                    (\( first, second ) ->
+                        apply first second
+                    )
 
         _ ->
-            t
+            Ok t
 
 
-apply : Type -> Type -> Type
+apply : Type -> Type -> Result String Type
 apply first second =
     case first of
         TypeLambda a typeVarName right ->
             Debug.crash "not implemented"
 
         TypeValue _ ->
-            Debug.crash "value cannot take arguments"
+            Err "value cannot take arguments"
 
         _ ->
-            TypeApply first second
+            Ok (TypeApply first second)
 
 
 {-|
