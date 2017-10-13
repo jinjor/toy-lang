@@ -81,21 +81,29 @@ evaluate : Env -> Type -> Type
 evaluate env t =
     case t of
         TypeRef a typeVarName ->
-            (Dict.get a >> Maybe.withDefault (TypeVar typeVarName)) env
+            env |> Dict.get a |> Maybe.withDefault t
 
         TypeLambda a typeVarName right ->
-            (\e -> evaluate (Dict.insert a (TypeVar typeVarName) e) right) env
+            TypeLambda a typeVarName (evaluate (Dict.insert a (TypeVar typeVarName) env) right)
 
         TypeApply first second ->
-            (\e -> apply (evaluate e first) (evaluate e second)) env
+            apply (evaluate env first) (evaluate env second)
 
         _ ->
             t
 
 
 apply : Type -> Type -> Type
-apply _ _ =
-    Debug.crash "not implemented"
+apply first second =
+    case first of
+        TypeLambda a typeVarName right ->
+            Debug.crash "not implemented"
+
+        TypeValue _ ->
+            Debug.crash "value cannot take arguments"
+
+        _ ->
+            TypeApply first second
 
 
 {-|
@@ -129,4 +137,28 @@ examples =
 
 
 test =
-    calc initialContext >> Tuple.first >> Debug.log "type"
+    calc initialContext >> Tuple.first >> Debug.log "test-calc"
+
+
+{-|
+  01: a
+  02: a
+  03: \a -> b
+  04: \a -> b
+  05: a 1
+  06: a 1
+-}
+examples2 =
+    { e01 = test2 (TypeRef "a" 1) Dict.empty
+    , e02 = test2 (TypeRef "a" 1) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e03 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) Dict.empty
+    , e04 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) (Dict.fromList [ ( "b", TypeValue "Int" ) ])
+    , e05 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) Dict.empty
+    , e06 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    }
+
+
+test2 t e =
+    t
+        |> evaluate e
+        |> Debug.log "test-eval"
