@@ -119,10 +119,15 @@ apply env first second =
                 right
 
         TypeArrow arg res ->
-            if arg == second then
-                Ok res
-            else
-                Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
+            case second of
+                TypeVar id ->
+                    Debug.crash ("TODO: resolved " ++ toString id ++ " = " ++ toString arg)
+
+                _ ->
+                    if arg == second then
+                        Ok res
+                    else
+                        Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
 
         TypeValue _ ->
             Err "value cannot take arguments"
