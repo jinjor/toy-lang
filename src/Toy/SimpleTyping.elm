@@ -18,7 +18,7 @@ type alias Env =
 type Type
     = TypeVar Int
     | TypeValue String
-    | TypeRef String Int
+    | TypeRef String
     | TypeLambda String Int Type
     | TypeArrow Type Type
     | TypeApply Type Type
@@ -44,9 +44,7 @@ calc context exp =
             ( TypeValue "String", context )
 
         Ref a ->
-            ( TypeRef a context.n
-            , incr context
-            )
+            ( TypeRef a, context )
 
         Lambda a exp ->
             let
@@ -81,7 +79,7 @@ incr context =
 evaluate : Env -> Type -> Result String Type
 evaluate env t =
     case t of
-        TypeRef a typeVarName ->
+        TypeRef a ->
             Ok (env |> Dict.get a |> Maybe.withDefault t)
 
         TypeLambda a typeVarName right ->
@@ -187,31 +185,31 @@ test =
   0y: a 1 -- env={ a: String -> Int }
 -}
 examples2 =
-    { e01 = test2 (TypeRef "a" 1) Dict.empty
-    , e02 = test2 (TypeRef "a" 1) (Dict.singleton "a" (TypeValue "Int"))
-    , e03 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) Dict.empty
-    , e04 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) (Dict.singleton "a" (TypeValue "Int"))
-    , e05 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) Dict.empty
-    , e06 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) (Dict.singleton "a" (TypeValue "Int"))
-    , e07 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) Dict.empty
-    , e08 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.singleton "a" (TypeValue "Int"))
+    { e01 = test2 (TypeRef "a") Dict.empty
+    , e02 = test2 (TypeRef "a") (Dict.singleton "a" (TypeValue "Int"))
+    , e03 = test2 (TypeLambda "a" 1 (TypeRef "b")) Dict.empty
+    , e04 = test2 (TypeLambda "a" 1 (TypeRef "b")) (Dict.singleton "a" (TypeValue "Int"))
+    , e05 = test2 (TypeLambda "a" 1 (TypeRef "a")) Dict.empty
+    , e06 = test2 (TypeLambda "a" 1 (TypeRef "a")) (Dict.singleton "a" (TypeValue "Int"))
+    , e07 = test2 (TypeApply (TypeRef "a") (TypeValue "Int")) Dict.empty
+    , e08 = test2 (TypeApply (TypeRef "a") (TypeValue "Int")) (Dict.singleton "a" (TypeValue "Int"))
     , e09 = test2 (TypeApply (TypeLambda "a" 1 (TypeValue "String")) (TypeValue "Int")) Dict.empty
-    , e10 = test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int")) Dict.empty
+    , e10 = test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a")) (TypeValue "Int")) Dict.empty
     , e11 =
         test2
-            (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int"))
+            (TypeApply (TypeLambda "a" 1 (TypeRef "a")) (TypeValue "Int"))
             (Dict.singleton "a" (TypeValue "String"))
     , e12 =
         test2
-            (TypeLambda "a" 1 (TypeApply (TypeRef "f" 2) (TypeRef "a" 3)))
+            (TypeLambda "a" 1 (TypeApply (TypeRef "f") (TypeRef "a")))
             (Dict.singleton "f" (TypeArrow (TypeValue "Int") (TypeValue "String")))
     , e0x =
         test2
-            (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
+            (TypeApply (TypeRef "a") (TypeValue "Int"))
             (Dict.singleton "a" (TypeArrow (TypeValue "Int") (TypeValue "String")))
     , e0y =
         test2
-            (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
+            (TypeApply (TypeRef "a") (TypeValue "Int"))
             (Dict.singleton "a" (TypeArrow (TypeValue "String") (TypeValue "Int")))
     }
 
