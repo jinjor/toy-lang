@@ -176,31 +176,38 @@ test =
   08: a 1 -- env={ a: Int }
   09: (\a -> "") 1 -- env={}
   10: (\a -> a) 1 -- env={}
-  11: (\a -> a) 1 -- env={ a: String}
+  11: (\a -> a) 1 -- env={ a: String }
+  12: (\a -> f a) -- env={ f: Int -> String }
   0x: a 1 -- env={ a: Int -> String }
   0y: a 1 -- env={ a: String -> Int }
 -}
 examples2 =
     { e01 = test2 (TypeRef "a" 1) Dict.empty
-    , e02 = test2 (TypeRef "a" 1) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e02 = test2 (TypeRef "a" 1) (Dict.singleton "a" (TypeValue "Int"))
     , e03 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) Dict.empty
-    , e04 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) (Dict.fromList [ ( "b", TypeValue "Int" ) ])
+    , e04 = test2 (TypeLambda "a" 1 (TypeRef "b" 2)) (Dict.singleton "a" (TypeValue "Int"))
     , e05 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) Dict.empty
-    , e06 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e06 = test2 (TypeLambda "a" 1 (TypeRef "a" 2)) (Dict.singleton "a" (TypeValue "Int"))
     , e07 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) Dict.empty
-    , e08 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "Int" ) ])
+    , e08 = test2 (TypeApply (TypeRef "a" 1) (TypeValue "Int")) (Dict.singleton "a" (TypeValue "Int"))
     , e09 = test2 (TypeApply (TypeLambda "a" 1 (TypeValue "String")) (TypeValue "Int")) Dict.empty
     , e10 = test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int")) Dict.empty
     , e11 =
-        test2 (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int")) (Dict.fromList [ ( "a", TypeValue "String" ) ])
+        test2
+            (TypeApply (TypeLambda "a" 1 (TypeRef "a" 2)) (TypeValue "Int"))
+            (Dict.singleton "a" (TypeValue "String"))
+    , e12 =
+        test2
+            (TypeLambda "a" 1 (TypeApply (TypeRef "f" 2) (TypeRef "a" 3)))
+            (Dict.singleton "f" (TypeArrow (TypeValue "Int") (TypeValue "String")))
     , e0x =
         test2
             (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
-            (Dict.fromList [ ( "a", TypeArrow (TypeValue "Int") (TypeValue "String") ) ])
+            (Dict.singleton "a" (TypeArrow (TypeValue "Int") (TypeValue "String")))
     , e0y =
         test2
             (TypeApply (TypeRef "a" 1) (TypeValue "Int"))
-            (Dict.fromList [ ( "a", TypeArrow (TypeValue "String") (TypeValue "Int") ) ])
+            (Dict.singleton "a" (TypeArrow (TypeValue "String") (TypeValue "Int")))
     }
 
 
