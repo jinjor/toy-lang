@@ -18,7 +18,6 @@ type alias Env =
 type Type
     = TypeVar Int
     | TypeValue String
-    | TypeLambda Int Type
     | TypeArrow Type Type
     | TypeApply Type Type
 
@@ -43,7 +42,7 @@ calc n env typeVars exp =
                 ( right, n1, env1 ) =
                     calc (n + 1) env (Dict.insert a n typeVars) exp
             in
-                ( TypeLambda n right, n1, env1 )
+                ( TypeArrow (TypeVar n) right, n1, env1 )
 
         Call a b ->
             let
@@ -59,9 +58,9 @@ calc n env typeVars exp =
 evaluate : Env -> Type -> Result String Type
 evaluate env t =
     case t of
-        TypeLambda id right ->
+        TypeArrow arg right ->
             evaluate env right
-                |> Result.map (TypeLambda id)
+                |> Result.map (TypeArrow arg)
 
         TypeApply first second ->
             Result.map2 (,) (evaluate env first) (evaluate env second)
@@ -80,16 +79,13 @@ evaluate env t =
 apply : Env -> Type -> Type -> Result String Type
 apply env first second =
     case first of
-        TypeLambda id right ->
-            evaluate (Dict.insert id second env) right
-
         TypeArrow arg res ->
             case ( arg, second ) of
+                ( TypeVar id, _ ) ->
+                    evaluate (Dict.insert id second env) res
+
                 ( _, TypeVar id ) ->
                     Err ("TODO1: resolved " ++ toString id ++ " = " ++ toString arg)
-
-                ( TypeVar id, _ ) ->
-                    Err "TODO2: arg cannot be tyep variable"
 
                 _ ->
                     if arg == second then
@@ -145,10 +141,8 @@ test =
   03: \a -> b -- env={}
   04: \a -> b -- env={ b: Int }
   05: \a -> a -- env={}
-  06: \a -> a -- env={ a: Int }
   09: (\a -> "") 1 -- env={}
   10: (\a -> a) 1 -- env={}
-  11: (\a -> a) 1 -- env={ a: String }
   *12: (\a -> f a) -- env={ f: Int -> String }
   0x: a 1 -- env={ a: Int -> String }
   0y: a 1 -- env={ a: String -> Int }
@@ -156,19 +150,14 @@ test =
 -}
 examples2 =
     { e01 = test2 (TypeVar 1) Dict.empty
-    , e03 = test2 (TypeLambda 1 (TypeVar 2)) Dict.empty
-    , e04 = test2 (TypeLambda 1 (TypeVar 2)) (Dict.singleton 2 (TypeValue "Int"))
-    , e05 = test2 (TypeLambda 1 (TypeVar 1)) Dict.empty
-    , e06 = test2 (TypeLambda 1 (TypeVar 1)) (Dict.singleton 1 (TypeValue "Int"))
-    , e09 = test2 (TypeApply (TypeLambda 1 (TypeValue "String")) (TypeValue "Int")) Dict.empty
-    , e10 = test2 (TypeApply (TypeLambda 1 (TypeVar 1)) (TypeValue "Int")) Dict.empty
-    , e11 =
-        test2
-            (TypeApply (TypeLambda 1 (TypeVar 1)) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeValue "String"))
+    , e03 = test2 (TypeArrow (TypeVar 1) (TypeVar 2)) Dict.empty
+    , e04 = test2 (TypeArrow (TypeVar 1) (TypeVar 2)) (Dict.singleton 2 (TypeValue "Int"))
+    , e05 = test2 (TypeArrow (TypeVar 1) (TypeVar 1)) Dict.empty
+    , e09 = test2 (TypeApply (TypeArrow (TypeVar 1) (TypeValue "String")) (TypeValue "Int")) Dict.empty
+    , e10 = test2 (TypeApply (TypeArrow (TypeVar 1) (TypeVar 1)) (TypeValue "Int")) Dict.empty
     , e12 =
         test2
-            (TypeLambda 1 (TypeApply (TypeVar 2) (TypeVar 1)))
+            (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
             (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
     , e0x =
         test2
@@ -181,7 +170,7 @@ examples2 =
     , e0z =
         test2
             (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeLambda 1 (TypeVar 1)))
+            (Dict.singleton 1 (TypeArrow (TypeVar 1) (TypeVar 1)))
     }
 
 
