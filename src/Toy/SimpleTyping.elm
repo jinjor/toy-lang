@@ -117,9 +117,12 @@ apply env first second =
                 right
 
         TypeArrow arg res ->
-            case second of
-                TypeVar id ->
-                    Debug.crash ("TODO: resolved " ++ toString id ++ " = " ++ toString arg)
+            case ( arg, second ) of
+                ( _, TypeVar id ) ->
+                    Err ("TODO1: resolved " ++ toString id ++ " = " ++ toString arg)
+
+                ( TypeVar id, _ ) ->
+                    Err ("TODO2: resolved " ++ toString id ++ " = " ++ toString second)
 
                 _ ->
                     if arg == second then
@@ -180,9 +183,10 @@ test =
   09: (\a -> "") 1 -- env={}
   10: (\a -> a) 1 -- env={}
   11: (\a -> a) 1 -- env={ a: String }
-  12: (\a -> f a) -- env={ f: Int -> String }
+  *12: (\a -> f a) -- env={ f: Int -> String }
   0x: a 1 -- env={ a: Int -> String }
   0y: a 1 -- env={ a: String -> Int }
+  *0z: a 1 -- env={ a: a -> a }
 -}
 examples2 =
     { e01 = test2 (TypeRef "a") Dict.empty
@@ -211,6 +215,10 @@ examples2 =
         test2
             (TypeApply (TypeRef "a") (TypeValue "Int"))
             (Dict.singleton "a" (TypeArrow (TypeValue "String") (TypeValue "Int")))
+    , e0z =
+        test2
+            (TypeApply (TypeRef "a") (TypeValue "Int"))
+            (Dict.singleton "a" (TypeArrow (TypeVar 1) (TypeVar 1)))
     }
 
 
