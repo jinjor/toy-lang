@@ -122,7 +122,7 @@ apply env first second =
                     Err ("TODO1: resolved " ++ toString id ++ " = " ++ toString arg)
 
                 ( TypeVar id, _ ) ->
-                    Err ("TODO2: resolved " ++ toString id ++ " = " ++ toString second)
+                    Err "TODO2: arg cannot be tyep variable"
 
                 _ ->
                     if arg == second then
@@ -186,7 +186,7 @@ test =
   *12: (\a -> f a) -- env={ f: Int -> String }
   0x: a 1 -- env={ a: Int -> String }
   0y: a 1 -- env={ a: String -> Int }
-  *0z: a 1 -- env={ a: a -> a }
+  0z: a 1 -- env={ a: a -> a }
 -}
 examples2 =
     { e01 = test2 (TypeRef "a") Dict.empty
@@ -218,7 +218,7 @@ examples2 =
     , e0z =
         test2
             (TypeApply (TypeRef "a") (TypeValue "Int"))
-            (Dict.singleton "a" (TypeArrow (TypeVar 1) (TypeVar 1)))
+            (Dict.singleton "a" (TypeLambda "" 1 (TypeVar 1)))
     }
 
 
