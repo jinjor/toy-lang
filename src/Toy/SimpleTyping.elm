@@ -55,49 +55,70 @@ calc n env typeVars exp =
                 ( TypeApply first second, n2, env2 )
 
 
-evaluate : Env -> Type -> Result String Type
+evaluate : Env -> Type -> Result String ( Type, Env )
 evaluate env t =
     case t of
         TypeArrow arg right ->
             evaluate env right
-                |> Result.map (TypeArrow arg)
+                |> Result.map
+                    (\( r, env ) ->
+                        case arg of
+                            TypeVar id ->
+                                env
+                                    |> Dict.get id
+                                    |> Maybe.map
+                                        (\t ->
+                                            ( TypeArrow t r, env )
+                                        )
+                                    |> Maybe.withDefault ( TypeArrow arg r, env )
+
+                            _ ->
+                                ( TypeArrow arg r, env )
+                    )
 
         TypeApply first second ->
-            Result.map2 (,) (evaluate env first) (evaluate env second)
+            evaluate env first
                 |> Result.andThen
-                    (\( first, second ) ->
-                        apply env first second
+                    (\( first, env ) ->
+                        evaluate env second
+                            |> Result.andThen
+                                (\( second, env ) ->
+                                    apply env first second
+                                )
                     )
 
         TypeVar id ->
-            Ok (env |> Dict.get id |> Maybe.withDefault t)
+            Ok ( env |> Dict.get id |> Maybe.withDefault t, env )
 
         _ ->
-            Ok t
+            Ok ( t, env )
 
 
-apply : Env -> Type -> Type -> Result String Type
+apply : Env -> Type -> Type -> Result String ( Type, Env )
 apply env first second =
     case first of
         TypeArrow arg res ->
             case ( arg, second ) of
+                ( TypeValue _, TypeVar id ) ->
+                    Ok ( first, Dict.insert id arg env )
+
+                ( TypeValue _, _ ) ->
+                    if arg == second then
+                        Ok ( res, env )
+                    else
+                        Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
+
                 ( TypeVar id, _ ) ->
                     evaluate (Dict.insert id second env) res
 
-                ( _, TypeVar id ) ->
-                    Err ("TODO1: resolved " ++ toString id ++ " = " ++ toString arg)
-
                 _ ->
-                    if arg == second then
-                        Ok res
-                    else
-                        Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
+                    apply env arg second
 
         TypeValue _ ->
             Err "value cannot take arguments"
 
         _ ->
-            Ok (TypeApply first second)
+            Ok ( TypeApply first second, env )
 
 
 {-|
@@ -143,7 +164,9 @@ test =
   05: \a -> a -- env={}
   09: (\a -> "") 1 -- env={}
   10: (\a -> a) 1 -- env={}
-  *12: (\a -> f a) -- env={ f: Int -> String }
+  12: (\a -> f a) -- env={ f: Int -> String }
+  0v: a 1 -- env={ a: Int }
+  0w: a 1 -- env={ a: a }
   0x: a 1 -- env={ a: Int -> String }
   0y: a 1 -- env={ a: String -> Int }
   0z: a 1 -- env={ a: a -> a }
@@ -159,6 +182,14 @@ examples2 =
         test2
             (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
             (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
+    , e0v =
+        test2
+            (TypeApply (TypeVar 1) (TypeValue "Int"))
+            (Dict.singleton 1 (TypeValue "Int"))
+    , e0w =
+        test2
+            (TypeApply (TypeVar 1) (TypeValue "Int"))
+            (Dict.singleton 1 (TypeVar 2))
     , e0x =
         test2
             (TypeApply (TypeVar 1) (TypeValue "Int"))
@@ -177,4 +208,5 @@ examples2 =
 test2 t e =
     t
         |> evaluate e
+        |> Result.map Tuple.first
         |> Debug.log "test-eval"
