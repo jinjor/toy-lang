@@ -21,6 +21,7 @@ type alias Identifier =
 type TypeExp
     = ArrowType TypeExp TypeExp
     | TypeValue TypeConstructor (List TypeExp)
+    | TypeVar String
 
 
 type alias TypeConstructor =
@@ -127,6 +128,7 @@ singleTypeExp =
                 |. spaces
                 |. symbol ")"
             , lazy (\_ -> typeValue)
+            , typeVariable
             ]
 
 
@@ -157,6 +159,15 @@ typeConstructor =
         source <|
             ignore (Exactly 1) Char.isUpper
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+
+
+typeVariable : Parser TypeExp
+typeVariable =
+    inContext "type variable" <|
+        map TypeVar <|
+            source <|
+                ignore (Exactly 1) Char.isLower
+                    |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
 assignment : Parser (Identifier -> Statement)

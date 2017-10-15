@@ -5,7 +5,7 @@ import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Toy.SimpleTyping as SimpleTyping exposing (..)
 import Toy.SimpleParser as SimpleParser
-import Dict
+import Dict exposing (Dict)
 import Parser
 
 
@@ -25,8 +25,9 @@ suite =
             , test "10" <| testCalc "\\a -> add a 1"
             , test "11" <| testCalc "\\a -> \\b -> 1"
             , test "12" <| testCalc "\\a -> \\b -> a"
-            , test "13" <| testCalc "let a = 1 in a"
-            , test "14" <| testCalc "let a = (\\a -> a) in a"
+            , test "13" <| testCalc "\\a -> \\a -> a"
+            , test "14" <| testCalc "let a = 1 in a"
+            , test "15" <| testCalc "let a = (\\a -> a) in a"
             ]
           {-
              01: a -- env={}
@@ -38,7 +39,7 @@ suite =
              07: (\a -> f a) -- env={ f: Int -> String }
              08: if a b c -- env={ if: Bool -> a -> a -> a }
              09: a 1 -- env={ a: Int }
-             10: a 1 -- env={ a: a }
+             *10: a 1 -- env={ a: a }
              11: a 1 -- env={ a: Int -> String }
              12: a 1 -- env={ a: String -> Int }
              13: a 1 -- env={ a: a -> a }
@@ -96,30 +97,63 @@ testCalc s _ =
             Expect.fail (SimpleParser.formatError e)
 
 
+testEval_ : String -> Dict String String -> () -> Expectation
+testEval_ s envSource _ =
+    let
+        parseResult =
+            Parser.run SimpleParser.expression s
+                |> Result.andThen
+                    (\exp ->
+                        envSource
+                            |> Dict.map (\_ s -> Parser.run SimpleParser.typeExp s)
+                            |> Dict.foldl
+                                (\name result results ->
+                                    results
+                                        |> Result.andThen
+                                            (\rs ->
+                                                result
+                                                    |> Result.map (\r -> Dict.insert name r rs)
+                                            )
+                                )
+                                (Ok Dict.empty)
+                            |> Result.map (\dict -> ( exp, dict ))
+                    )
+    in
+        case parseResult of
+            Ok ( exp, env_ ) ->
+                let
+                    ( t, _, dep ) =
+                        exp
+                            |> SimpleTyping.calc 0 Dict.empty Dict.empty
 
--- testEval : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
--- testEval s e _ =
---     case Parser.run SimpleParser.expression s of
---         Ok exp ->
---             let
---                 ( t, _, env ) =
---                     exp
---                         |> SimpleTyping.calc 0 Dict.empty Dict.empty
---             in
---                 t
---                     |> evaluate e
---                     |> Result.map (Tuple.first >> formatType)
---                     |> Debug.log s
---                     |> always Expect.pass
---
---         Err e ->
---             Expect.fail (SimpleParser.formatError e)
+                    env =
+                        env_
+                            |> Dict.toList
+                            |> List.filterMap
+                                (\( name, tExp ) ->
+                                    dep
+                                        |> Dict.get name
+                                        |> Maybe.map
+                                            (\id ->
+                                                ( id, SimpleTyping.typeFromExp tExp )
+                                            )
+                                )
+                            |> Dict.fromList
+                in
+                    t
+                        |> evaluate env
+                        |> Result.map (Tuple.first >> formatType)
+                        |> Debug.log s
+                        |> always Expect.pass
+
+            Err e ->
+                Expect.fail (SimpleParser.formatError e)
 
 
 testEval : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
-testEval t e _ =
+testEval t env _ =
     t
-        |> evaluate e
+        |> evaluate env
         |> Result.map (Tuple.first >> formatType)
         |> Debug.log "test-eval"
         |> always Expect.pass

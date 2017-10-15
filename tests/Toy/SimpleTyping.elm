@@ -1,6 +1,6 @@
 module Toy.SimpleTyping exposing (..)
 
-import Toy.SimpleParser exposing (..)
+import Toy.SimpleParser as SimpleParser exposing (..)
 import Dict exposing (Dict)
 
 
@@ -29,6 +29,36 @@ formatType t =
 
         TypeApply t1 t2 ->
             "app(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
+
+
+typeFromExp : TypeExp -> Type
+typeFromExp t =
+    case t of
+        SimpleParser.ArrowType t1 t2 ->
+            TypeArrow (typeFromExp t1) (typeFromExp t2)
+
+        SimpleParser.TypeValue constructor _ ->
+            TypeValue constructor
+
+        SimpleParser.TypeVar name ->
+            case name of
+                "a" ->
+                    TypeVar 1
+
+                "b" ->
+                    TypeVar 2
+
+                "c" ->
+                    TypeVar 3
+
+                "d" ->
+                    TypeVar 4
+
+                "e" ->
+                    TypeVar 5
+
+                _ ->
+                    Debug.crash "TODO"
 
 
 calc : Int -> Dict String Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
