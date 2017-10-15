@@ -52,7 +52,7 @@ testFromExp s _ =
     case Parser.run SimpleParser.expression s of
         Ok exp ->
             exp
-                |> SimpleTyping.fromExp 0 Dict.empty Dict.empty
+                |> SimpleTyping.fromExp 0 Dict.empty
                 |> (\( t, _, env ) -> ( t, env ))
                 |> (\( t, dep ) -> Debug.log s (formatType t))
                 |> always Expect.pass
@@ -88,7 +88,7 @@ testEval s envSource _ =
                 let
                     ( t, _, dep ) =
                         exp
-                            |> SimpleTyping.fromExp 0 Dict.empty Dict.empty
+                            |> SimpleTyping.fromExp 0 Dict.empty
 
                     env =
                         env_

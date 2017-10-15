@@ -61,44 +61,47 @@ fromTypeExp t =
                     Debug.crash "TODO"
 
 
-fromExp : Int -> Dict String Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
-fromExp n env typeVars exp =
+fromExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
+fromExp n typeVars exp =
     case exp of
         IntLiteral _ ->
-            ( TypeValue "Int", n, env )
+            ( TypeValue "Int", n, Dict.empty )
 
         StringLiteral _ ->
-            ( TypeValue "String", n, env )
+            ( TypeValue "String", n, Dict.empty )
 
         Ref a ->
             typeVars
                 |> Dict.get a
-                |> Maybe.map (\t -> ( t, n, env ))
-                |> Maybe.withDefault ( TypeVar n, n + 1, Dict.insert a n env )
+                |> Maybe.map (\t -> ( t, n, Dict.empty ))
+                |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a n )
 
         Lambda a exp ->
             let
-                ( right, n1, env1 ) =
-                    fromExp (n + 1) env (Dict.insert a (TypeVar n) typeVars) exp
+                ( right, n1, dep ) =
+                    fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
             in
-                ( TypeArrow (TypeVar n) right, n1, env1 )
+                ( TypeArrow (TypeVar n) right, n1, dep )
 
         Call a b ->
             let
-                ( first, n1, env1 ) =
-                    fromExp n env typeVars a
+                ( first, n1, dep ) =
+                    fromExp n typeVars a
 
-                ( second, n2, env2 ) =
-                    fromExp n1 env1 typeVars b
+                ( second, n2, dep2 ) =
+                    fromExp n1 typeVars b
             in
-                ( TypeApply first second, n2, env2 )
+                ( TypeApply first second, n2, Dict.union dep dep2 )
 
         Let [ Assignment name a ] b ->
             let
-                ( first, n1, env1 ) =
-                    fromExp n env (Dict.insert name (TypeVar n) typeVars) a
+                ( first, n1, dep ) =
+                    fromExp n (Dict.insert name (TypeVar n) typeVars) a
+
+                ( second, n2, dep2 ) =
+                    fromExp n1 (Dict.insert name first typeVars) b
             in
-                fromExp n1 env1 (Dict.insert name first typeVars) b
+                ( second, n2, Dict.union dep dep2 )
 
         Let _ _ ->
             Debug.crash "not implemented yet"
