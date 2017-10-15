@@ -177,6 +177,7 @@ test =
   09: (\a -> "") 1 -- env={}
   10: (\a -> a) 1 -- env={}
   12: (\a -> f a) -- env={ f: Int -> String }
+  13: if a b c -- env={ if: Bool -> a -> a -> a }
   0v: a 1 -- env={ a: Int }
   0w: a 1 -- env={ a: a }
   0x: a 1 -- env={ a: Int -> String }
@@ -194,6 +195,10 @@ examples2 =
         test2
             (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
             (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
+    , e13 =
+        test2
+            (TypeApply (TypeApply (TypeApply (TypeVar 1) (TypeVar 2)) (TypeVar 3)) (TypeVar 4))
+            (Dict.singleton 1 (TypeArrow (TypeValue "Bool") (TypeArrow (TypeVar 5) (TypeArrow (TypeVar 5) (TypeVar 5)))))
     , e0v =
         test2
             (TypeApply (TypeVar 1) (TypeValue "Int"))
