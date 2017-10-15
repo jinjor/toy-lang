@@ -30,55 +30,27 @@ suite =
             , test "15" <| testCalc "let a = (\\a -> a) in a"
             ]
           {-
-             01: a -- env={}
-             02: \a -> b -- env={}
-             03: \a -> b -- env={ b: Int }
-             04: \a -> a -- env={}
              05: (\a -> "") 1 -- env={}
              06: (\a -> a) 1 -- env={}
              07: (\a -> f a) -- env={ f: Int -> String }
-             08: if a b c -- env={ if: Bool -> a -> a -> a }
-             09: a 1 -- env={ a: Int }
-             *10: a 1 -- env={ a: a }
-             11: a 1 -- env={ a: Int -> String }
-             12: a 1 -- env={ a: String -> Int }
-             13: a 1 -- env={ a: a -> a }
           -}
         , describe "eval"
-            [ test "01" <| testEval (TypeVar 1) Dict.empty
-            , test "02" <| testEval (TypeArrow (TypeVar 1) (TypeVar 2)) Dict.empty
-            , test "03" <| testEval (TypeArrow (TypeVar 1) (TypeVar 2)) (Dict.singleton 2 (TypeValue "Int"))
-            , test "04" <| testEval (TypeArrow (TypeVar 1) (TypeVar 1)) Dict.empty
-            , test "05" <| testEval (TypeApply (TypeArrow (TypeVar 1) (TypeValue "String")) (TypeValue "Int")) Dict.empty
-            , test "06" <| testEval (TypeApply (TypeArrow (TypeVar 1) (TypeVar 1)) (TypeValue "Int")) Dict.empty
+            [ test "01" <| testEval "a" Dict.empty
+            , test "02" <| testEval "\\a -> b" Dict.empty
+            , test "03" <| testEval "\\a -> b" (Dict.singleton "b" "Int")
+            , test "04" <| testEval "\\a -> a" Dict.empty
+            , test "05" <| testEval2 (TypeApply (TypeArrow (TypeVar 1) (TypeValue "String")) (TypeValue "Int")) Dict.empty
+            , test "06" <| testEval2 (TypeApply (TypeArrow (TypeVar 1) (TypeVar 1)) (TypeValue "Int")) Dict.empty
             , test "07" <|
-                testEval
+                testEval2
                     (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
                     (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
-            , test "08" <|
-                testEval
-                    (TypeApply (TypeApply (TypeApply (TypeVar 1) (TypeVar 2)) (TypeVar 3)) (TypeVar 4))
-                    (Dict.singleton 1 (TypeArrow (TypeValue "Bool") (TypeArrow (TypeVar 5) (TypeArrow (TypeVar 5) (TypeVar 5)))))
-            , test "09" <|
-                testEval
-                    (TypeApply (TypeVar 1) (TypeValue "Int"))
-                    (Dict.singleton 1 (TypeValue "Int"))
-            , test "10" <|
-                testEval
-                    (TypeApply (TypeVar 1) (TypeValue "Int"))
-                    (Dict.singleton 1 (TypeVar 2))
-            , test "11" <|
-                testEval
-                    (TypeApply (TypeVar 1) (TypeValue "Int"))
-                    (Dict.singleton 1 (TypeArrow (TypeValue "Int") (TypeValue "String")))
-            , test "12" <|
-                testEval
-                    (TypeApply (TypeVar 1) (TypeValue "Int"))
-                    (Dict.singleton 1 (TypeArrow (TypeValue "String") (TypeValue "Int")))
-            , test "13" <|
-                testEval
-                    (TypeApply (TypeVar 1) (TypeValue "Int"))
-                    (Dict.singleton 1 (TypeArrow (TypeVar 1) (TypeVar 1)))
+            , test "08" <| testEval "if a b c" (Dict.singleton "if" "Bool -> a -> a -> a")
+            , test "09" <| testEval "a 1" (Dict.singleton "a" "Int")
+            , test "10" <| testEval "a 1" (Dict.singleton "a" "a")
+            , test "11" <| testEval "a 1" (Dict.singleton "a" "Int -> String")
+            , test "12" <| testEval "a 1" (Dict.singleton "a" "String -> Int")
+            , test "13" <| testEval "a 1" (Dict.singleton "a" "a -> a")
             ]
         ]
 
@@ -97,8 +69,8 @@ testCalc s _ =
             Expect.fail (SimpleParser.formatError e)
 
 
-testEval_ : String -> Dict String String -> () -> Expectation
-testEval_ s envSource _ =
+testEval : String -> Dict String String -> () -> Expectation
+testEval s envSource _ =
     let
         parseResult =
             Parser.run SimpleParser.expression s
@@ -150,8 +122,8 @@ testEval_ s envSource _ =
                 Expect.fail (SimpleParser.formatError e)
 
 
-testEval : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
-testEval t env _ =
+testEval2 : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
+testEval2 t env _ =
     t
         |> evaluate env
         |> Result.map (Tuple.first >> formatType)
