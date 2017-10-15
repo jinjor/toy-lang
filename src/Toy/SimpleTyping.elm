@@ -9,6 +9,7 @@ type Exp
     | Ref String
     | Lambda String Exp
     | Call Exp Exp
+    | Let String Exp Exp
 
 
 type alias Env =
@@ -22,7 +23,7 @@ type Type
     | TypeApply Type Type
 
 
-calc : Int -> Dict String Int -> Dict String Int -> Exp -> ( Type, Int, Dict String Int )
+calc : Int -> Dict String Int -> Dict String Type -> Exp -> ( Type, Int, Dict String Int )
 calc n env typeVars exp =
     case exp of
         IntLiteral ->
@@ -34,13 +35,13 @@ calc n env typeVars exp =
         Ref a ->
             typeVars
                 |> Dict.get a
-                |> Maybe.map (\id -> ( TypeVar id, n, env ))
+                |> Maybe.map (\t -> ( t, n, env ))
                 |> Maybe.withDefault ( TypeVar n, n + 1, Dict.insert a n env )
 
         Lambda a exp ->
             let
                 ( right, n1, env1 ) =
-                    calc (n + 1) env (Dict.insert a n typeVars) exp
+                    calc (n + 1) env (Dict.insert a (TypeVar n) typeVars) exp
             in
                 ( TypeArrow (TypeVar n) right, n1, env1 )
 
@@ -53,6 +54,13 @@ calc n env typeVars exp =
                     calc n1 env1 typeVars b
             in
                 ( TypeApply first second, n2, env2 )
+
+        Let name a b ->
+            let
+                ( first, n1, env1 ) =
+                    calc n env (Dict.insert name (TypeVar n) typeVars) a
+            in
+                calc n1 env1 (Dict.insert name first typeVars) b
 
 
 evaluate : Env -> Type -> Result String ( Type, Env )
@@ -134,6 +142,8 @@ apply env first second =
   10: \a -> add a 1
   11: \a -> \b -> 1
   12: \a -> \b -> a
+  13: let a = 1 in a
+  14: let a = (\a -> a) in a
 -}
 examples =
     { e01 = test <| IntLiteral
@@ -148,6 +158,8 @@ examples =
     , e10 = test <| Lambda "a" (Call (Call (Ref "add") (Ref "a")) IntLiteral)
     , e11 = test <| Lambda "a" (Lambda "b" IntLiteral)
     , e12 = test <| Lambda "a" (Lambda "b" (Ref "a"))
+    , e13 = test <| Let "a" IntLiteral (Ref "a")
+    , e14 = test <| Let "a" (Lambda "a" (Ref "a")) (Ref "a")
     }
 
 
