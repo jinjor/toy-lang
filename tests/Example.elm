@@ -12,31 +12,31 @@ import Parser
 suite : Test
 suite =
     describe "SimpleTyping"
-        [ describe "calc"
-            [ test "01" <| testCalc "1"
-            , test "02" <| testCalc "''"
-            , test "03" <| testCalc "a"
-            , test "04" <| testCalc "f 1"
-            , test "05" <| testCalc "f 1 ''"
-            , test "06" <| testCalc "f a"
-            , test "07" <| testCalc "\\a -> 1"
-            , test "08" <| testCalc "\\a -> a"
-            , test "09" <| testCalc "\\a -> increment a"
-            , test "10" <| testCalc "\\a -> add a 1"
-            , test "11" <| testCalc "\\a -> \\b -> 1"
-            , test "12" <| testCalc "\\a -> \\b -> a"
-            , test "13" <| testCalc "\\a -> \\a -> a"
-            , test "14" <| testCalc "let a = 1 in a"
-            , test "15" <| testCalc "let a = (\\a -> a) in a"
+        [ describe "fromExp"
+            [ test "01" <| testFromExp "1"
+            , test "02" <| testFromExp "''"
+            , test "03" <| testFromExp "a"
+            , test "04" <| testFromExp "f 1"
+            , test "05" <| testFromExp "f 1 ''"
+            , test "06" <| testFromExp "f a"
+            , test "07" <| testFromExp "\\a -> 1"
+            , test "08" <| testFromExp "\\a -> a"
+            , test "09" <| testFromExp "\\a -> increment a"
+            , test "10" <| testFromExp "\\a -> add a 1"
+            , test "11" <| testFromExp "\\a -> \\b -> 1"
+            , test "12" <| testFromExp "\\a -> \\b -> a"
+            , test "13" <| testFromExp "\\a -> \\a -> a"
+            , test "14" <| testFromExp "let a = 1 in a"
+            , test "15" <| testFromExp "let a = (\\a -> a) in a"
             ]
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
             , test "02" <| testEval "\\a -> b" Dict.empty
             , test "03" <| testEval "\\a -> b" (Dict.singleton "b" "Int")
             , test "04" <| testEval "\\a -> a" Dict.empty
-            , test "*05" <| testEval "(\\a -> '') 1" Dict.empty
-            , test "*06" <| testEval "(\\a -> a) 1" Dict.empty
-            , test "*07" <| testEval "(\\a -> f a)" (Dict.singleton "f" "Int -> String")
+            , test "05" <| testEval "(\\a -> '') 1" Dict.empty
+            , test "06" <| testEval "(\\a -> a) 1" Dict.empty
+            , test "07" <| testEval "(\\a -> f a)" (Dict.singleton "f" "Int -> String")
             , test "08" <| testEval "if a b c" (Dict.singleton "if" "Bool -> a -> a -> a")
             , test "09" <| testEval "a 1" (Dict.singleton "a" "Int")
             , test "10" <| testEval "a 1" (Dict.singleton "a" "a")
@@ -47,12 +47,12 @@ suite =
         ]
 
 
-testCalc : String -> () -> Expectation
-testCalc s _ =
+testFromExp : String -> () -> Expectation
+testFromExp s _ =
     case Parser.run SimpleParser.expression s of
         Ok exp ->
             exp
-                |> SimpleTyping.calc 0 Dict.empty Dict.empty
+                |> SimpleTyping.fromExp 0 Dict.empty Dict.empty
                 |> (\( t, _, env ) -> ( t, env ))
                 |> (\( t, dep ) -> Debug.log s (formatType t))
                 |> always Expect.pass
@@ -88,7 +88,7 @@ testEval s envSource _ =
                 let
                     ( t, _, dep ) =
                         exp
-                            |> SimpleTyping.calc 0 Dict.empty Dict.empty
+                            |> SimpleTyping.fromExp 0 Dict.empty Dict.empty
 
                     env =
                         env_
@@ -99,7 +99,7 @@ testEval s envSource _ =
                                         |> Dict.get name
                                         |> Maybe.map
                                             (\id ->
-                                                ( id, SimpleTyping.typeFromExp tExp )
+                                                ( id, SimpleTyping.fromTypeExp tExp )
                                             )
                                 )
                             |> Dict.fromList

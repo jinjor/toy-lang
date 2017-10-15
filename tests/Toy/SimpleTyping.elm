@@ -31,11 +31,11 @@ formatType t =
             "app(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
-typeFromExp : TypeExp -> Type
-typeFromExp t =
+fromTypeExp : TypeExp -> Type
+fromTypeExp t =
     case t of
         SimpleParser.ArrowType t1 t2 ->
-            TypeArrow (typeFromExp t1) (typeFromExp t2)
+            TypeArrow (fromTypeExp t1) (fromTypeExp t2)
 
         SimpleParser.TypeValue constructor _ ->
             TypeValue constructor
@@ -61,8 +61,8 @@ typeFromExp t =
                     Debug.crash "TODO"
 
 
-calc : Int -> Dict String Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
-calc n env typeVars exp =
+fromExp : Int -> Dict String Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
+fromExp n env typeVars exp =
     case exp of
         IntLiteral _ ->
             ( TypeValue "Int", n, env )
@@ -79,26 +79,26 @@ calc n env typeVars exp =
         Lambda a exp ->
             let
                 ( right, n1, env1 ) =
-                    calc (n + 1) env (Dict.insert a (TypeVar n) typeVars) exp
+                    fromExp (n + 1) env (Dict.insert a (TypeVar n) typeVars) exp
             in
                 ( TypeArrow (TypeVar n) right, n1, env1 )
 
         Call a b ->
             let
                 ( first, n1, env1 ) =
-                    calc n env typeVars a
+                    fromExp n env typeVars a
 
                 ( second, n2, env2 ) =
-                    calc n1 env1 typeVars b
+                    fromExp n1 env1 typeVars b
             in
                 ( TypeApply first second, n2, env2 )
 
         Let name a b ->
             let
                 ( first, n1, env1 ) =
-                    calc n env (Dict.insert name (TypeVar n) typeVars) a
+                    fromExp n env (Dict.insert name (TypeVar n) typeVars) a
             in
-                calc n1 env1 (Dict.insert name first typeVars) b
+                fromExp n1 env1 (Dict.insert name first typeVars) b
 
 
 evaluate : Env -> Type -> Result String ( Type, Env )
