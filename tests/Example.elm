@@ -89,7 +89,7 @@ testCalc s _ =
             exp
                 |> SimpleTyping.calc 0 Dict.empty Dict.empty
                 |> (\( t, _, env ) -> ( t, env ))
-                |> Debug.log s
+                |> (\( t, dep ) -> Debug.log s (formatType t))
                 |> always Expect.pass
 
         Err e ->
