@@ -6,30 +6,12 @@ import Parser.LowLevel exposing (..)
 
 
 type Module
-    = Module (List (Pos Statement))
-
-
-type alias Position =
-    { row : Int
-    , col : Int
-    }
-
-
-type alias Range =
-    { start : Position
-    , end : Position
-    }
-
-
-type alias Pos a =
-    { range : Range
-    , content : a
-    }
+    = Module (List Statement)
 
 
 type Statement
-    = Assignment (Pos Identifier) (Pos Expression)
-    | TypeSignature Identifier (Pos TypeExp)
+    = Assignment Identifier Expression
+    | TypeSignature Identifier TypeExp
 
 
 type alias Identifier =
@@ -46,11 +28,12 @@ type alias TypeConstructor =
 
 
 type Expression
-    = NumberLiteral String
+    = IntLiteral String
     | StringLiteral String
     | Ref Identifier
-    | Call (Pos Expression) (Pos Expression)
-    | Lambda Patterns (Pos Expression)
+    | Call Expression Expression
+    | Lambda String Expression
+    | Let String Expression Expression
 
 
 type Patterns
@@ -68,7 +51,7 @@ module_ =
             |= statements ""
 
 
-statements : String -> Parser (List (Pos Statement))
+statements : String -> Parser (List Statement)
 statements indent =
     inContext "statements" <|
         succeed identity
@@ -93,26 +76,25 @@ emptyLine =
         |. symbol "\n"
 
 
-statement : Parser (Pos Statement)
+statement : Parser Statement
 statement =
     inContext "statement" <|
-        positioned <|
-            succeed (\id f -> f id)
-                |= positioned identifier
-                |. spaces
-                |= oneOf
-                    [ assignment
-                    , typeSignature
-                    ]
+        succeed (\id f -> f id)
+            |= identifier
+            |. spaces
+            |= oneOf
+                [ assignment
+                , typeSignature
+                ]
 
 
-typeSignature : Parser (Pos Identifier -> Statement)
+typeSignature : Parser (Identifier -> Statement)
 typeSignature =
     inContext "type signature" <|
-        succeed (\typeExp id -> TypeSignature id.content typeExp)
+        succeed (\typeExp id -> TypeSignature id typeExp)
             |. symbol ":"
             |. spaces
-            |= positioned typeExp
+            |= typeExp
 
 
 typeExp : Parser TypeExp
@@ -177,7 +159,7 @@ typeConstructor =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-assignment : Parser (Pos Identifier -> Statement)
+assignment : Parser (Identifier -> Statement)
 assignment =
     inContext "assignment" <|
         succeed (\exp id -> Assignment id exp)
@@ -194,36 +176,31 @@ identifier =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-expression : Parser (Pos Expression)
+expression : Parser Expression
 expression =
     inContext "expression" <|
-        positioned <|
-            oneOf
-                [ number
-                , string
-                , lambda
-                , succeed makeCall
-                    |= positioned ref
-                    |. spaces
-                    |= lazy (\_ -> functionTail)
-                ]
+        oneOf
+            [ number
+            , string
+            , lazy (\_ -> lambda)
+            , succeed makeCall
+                |= ref
+                |. spaces
+                |= lazy (\_ -> functionTail)
+            ]
 
 
-makeCall : Pos Expression -> List (Pos Expression) -> Expression
+makeCall : Expression -> List Expression -> Expression
 makeCall head tail =
     case tail of
         [] ->
-            head.content
+            head
 
         x :: xs ->
-            let
-                range =
-                    Range head.range.start x.range.end
-            in
-                makeCall (Pos range (Call head x)) xs
+            makeCall (Call head x) xs
 
 
-functionTail : Parser (List (Pos Expression))
+functionTail : Parser (List Expression)
 functionTail =
     inContext "function tail" <|
         oneOf
@@ -240,7 +217,7 @@ lambda =
     inContext "lambda" <|
         succeed Lambda
             |. symbol "\\"
-            |= patterns
+            |= identifier
             |. spaces
             |. symbol "->"
             |. spaces
@@ -278,7 +255,7 @@ ref =
 number : Parser Expression
 number =
     inContext "number" <|
-        succeed NumberLiteral
+        succeed IntLiteral
             |= oneOf
                 [ map toString int
                 , map toString float
@@ -289,11 +266,11 @@ string : Parser Expression
 string =
     inContext "string" <|
         succeed StringLiteral
-            |. symbol "\""
+            |. symbol "'"
             |= (source <|
-                    ignore zeroOrMore (\c -> c /= '"')
+                    ignore zeroOrMore (\c -> c /= '\'')
                )
-            |. symbol "\""
+            |. symbol "'"
 
 
 spaces : Parser ()
@@ -304,17 +281,6 @@ spaces =
 spaces1 : Parser ()
 spaces1 =
     ignore oneOrMore (\c -> c == ' ')
-
-
-positioned : Parser a -> Parser (Pos a)
-positioned parser =
-    succeed
-        (\( row1, col1 ) a ( row2, col2 ) ->
-            Pos (Range (Position row1 col1) (Position row2 col2)) a
-        )
-        |= getPosition
-        |= parser
-        |= getPosition
 
 
 formatError : Parser.Error -> String

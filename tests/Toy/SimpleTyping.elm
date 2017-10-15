@@ -1,15 +1,7 @@
 module Toy.SimpleTyping exposing (..)
 
+import Toy.SimpleParser exposing (..)
 import Dict exposing (Dict)
-
-
-type Exp
-    = IntLiteral
-    | StringLiteral
-    | Ref String
-    | Lambda String Exp
-    | Call Exp Exp
-    | Let String Exp Exp
 
 
 type alias Env =
@@ -23,13 +15,13 @@ type Type
     | TypeApply Type Type
 
 
-calc : Int -> Dict String Int -> Dict String Type -> Exp -> ( Type, Int, Dict String Int )
+calc : Int -> Dict String Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
 calc n env typeVars exp =
     case exp of
-        IntLiteral ->
+        IntLiteral _ ->
             ( TypeValue "Int", n, env )
 
-        StringLiteral ->
+        StringLiteral _ ->
             ( TypeValue "String", n, env )
 
         Ref a ->
@@ -127,103 +119,3 @@ apply env first second =
 
         _ ->
             Ok ( TypeApply first second, env )
-
-
-{-|
-  01: 1
-  02: ""
-  03: a
-  04: f 1
-  05: f 1 ""
-  06: f a
-  07: \a -> 1
-  08: \a -> a
-  09: \a -> increment a
-  10: \a -> add a 1
-  11: \a -> \b -> 1
-  12: \a -> \b -> a
-  13: let a = 1 in a
-  14: let a = (\a -> a) in a
--}
-examples =
-    { e01 = test <| IntLiteral
-    , e02 = test <| StringLiteral
-    , e03 = test <| Ref "a"
-    , e04 = test <| Call (Ref "f") IntLiteral
-    , e05 = test <| Call (Call (Ref "f") IntLiteral) StringLiteral
-    , e06 = test <| Call (Ref "f") (Ref "a")
-    , e07 = test <| Lambda "a" IntLiteral
-    , e08 = test <| Lambda "a" (Ref "a")
-    , e09 = test <| Lambda "a" (Call (Ref "increment") IntLiteral)
-    , e10 = test <| Lambda "a" (Call (Call (Ref "add") (Ref "a")) IntLiteral)
-    , e11 = test <| Lambda "a" (Lambda "b" IntLiteral)
-    , e12 = test <| Lambda "a" (Lambda "b" (Ref "a"))
-    , e13 = test <| Let "a" IntLiteral (Ref "a")
-    , e14 = test <| Let "a" (Lambda "a" (Ref "a")) (Ref "a")
-    }
-
-
-test =
-    calc 0 Dict.empty Dict.empty
-        >> (\( t, _, env ) -> ( t, env ))
-        >> Debug.log "test-calc"
-
-
-{-|
-  01: a -- env={}
-  03: \a -> b -- env={}
-  04: \a -> b -- env={ b: Int }
-  05: \a -> a -- env={}
-  09: (\a -> "") 1 -- env={}
-  10: (\a -> a) 1 -- env={}
-  12: (\a -> f a) -- env={ f: Int -> String }
-  13: if a b c -- env={ if: Bool -> a -> a -> a }
-  0v: a 1 -- env={ a: Int }
-  0w: a 1 -- env={ a: a }
-  0x: a 1 -- env={ a: Int -> String }
-  0y: a 1 -- env={ a: String -> Int }
-  0z: a 1 -- env={ a: a -> a }
--}
-examples2 =
-    { e01 = test2 (TypeVar 1) Dict.empty
-    , e03 = test2 (TypeArrow (TypeVar 1) (TypeVar 2)) Dict.empty
-    , e04 = test2 (TypeArrow (TypeVar 1) (TypeVar 2)) (Dict.singleton 2 (TypeValue "Int"))
-    , e05 = test2 (TypeArrow (TypeVar 1) (TypeVar 1)) Dict.empty
-    , e09 = test2 (TypeApply (TypeArrow (TypeVar 1) (TypeValue "String")) (TypeValue "Int")) Dict.empty
-    , e10 = test2 (TypeApply (TypeArrow (TypeVar 1) (TypeVar 1)) (TypeValue "Int")) Dict.empty
-    , e12 =
-        test2
-            (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
-            (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
-    , e13 =
-        test2
-            (TypeApply (TypeApply (TypeApply (TypeVar 1) (TypeVar 2)) (TypeVar 3)) (TypeVar 4))
-            (Dict.singleton 1 (TypeArrow (TypeValue "Bool") (TypeArrow (TypeVar 5) (TypeArrow (TypeVar 5) (TypeVar 5)))))
-    , e0v =
-        test2
-            (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeValue "Int"))
-    , e0w =
-        test2
-            (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeVar 2))
-    , e0x =
-        test2
-            (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeArrow (TypeValue "Int") (TypeValue "String")))
-    , e0y =
-        test2
-            (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeArrow (TypeValue "String") (TypeValue "Int")))
-    , e0z =
-        test2
-            (TypeApply (TypeVar 1) (TypeValue "Int"))
-            (Dict.singleton 1 (TypeArrow (TypeVar 1) (TypeVar 1)))
-    }
-
-
-test2 t e =
-    t
-        |> evaluate e
-        |> Result.map Tuple.first
-        |> Debug.log "test-eval"
