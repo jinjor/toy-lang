@@ -199,6 +199,12 @@ expression =
                 |. spaces
                 |= lazy (\_ -> functionTail)
             , lazy (\_ -> letin)
+            , succeed identity
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ")"
             ]
 
 
