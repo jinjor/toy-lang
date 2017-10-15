@@ -93,12 +93,15 @@ fromExp n env typeVars exp =
             in
                 ( TypeApply first second, n2, env2 )
 
-        Let name a b ->
+        Let [ Assignment name a ] b ->
             let
                 ( first, n1, env1 ) =
                     fromExp n env (Dict.insert name (TypeVar n) typeVars) a
             in
                 fromExp n1 env1 (Dict.insert name first typeVars) b
+
+        Let _ _ ->
+            Debug.crash "not implemented yet"
 
 
 evaluate : Env -> Type -> Result String ( Type, Env )

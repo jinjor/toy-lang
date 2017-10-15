@@ -34,7 +34,7 @@ type Expression
     | Ref Identifier
     | Call Expression Expression
     | Lambda String Expression
-    | Let String Expression Expression
+    | Let (List Statement) Expression
 
 
 type Patterns
@@ -273,22 +273,27 @@ ref =
 letin : Parser Expression
 letin =
     inContext "let in" <|
-        succeed
-            (\statement outer ->
-                case statement of
-                    Assignment id inner ->
-                        Let id inner outer
-
-                    _ ->
-                        Debug.crash "not implemented for now"
-            )
+        succeed Let
             |. keyword "let"
             |. spaces
-            |= statement
-            |. spaces
-            |. keyword "in"
+            |= onelineStatementsUntilIn
             |. spaces
             |= lazy (\_ -> expression)
+
+
+onelineStatementsUntilIn : Parser (List Statement)
+onelineStatementsUntilIn =
+    inContext "oneline statements for debug" <|
+        oneOf
+            [ succeed []
+                |. keyword "in"
+            , succeed (::)
+                |= statement
+                |. spaces
+                |. symbol ";"
+                |= lazy (\_ -> onelineStatementsUntilIn)
+            , succeed []
+            ]
 
 
 number : Parser Expression
