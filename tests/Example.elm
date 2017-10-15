@@ -112,12 +112,3 @@ testEval s envSource _ =
 
             Err e ->
                 Expect.fail (SimpleParser.formatError e)
-
-
-testEval2 : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
-testEval2 t env _ =
-    t
-        |> evaluate env
-        |> Result.map (Tuple.first >> formatType)
-        |> Debug.log "test-eval"
-        |> always Expect.pass
