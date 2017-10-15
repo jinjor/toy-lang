@@ -29,22 +29,14 @@ suite =
             , test "14" <| testCalc "let a = 1 in a"
             , test "15" <| testCalc "let a = (\\a -> a) in a"
             ]
-          {-
-             05: (\a -> "") 1 -- env={}
-             06: (\a -> a) 1 -- env={}
-             07: (\a -> f a) -- env={ f: Int -> String }
-          -}
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
             , test "02" <| testEval "\\a -> b" Dict.empty
             , test "03" <| testEval "\\a -> b" (Dict.singleton "b" "Int")
             , test "04" <| testEval "\\a -> a" Dict.empty
-            , test "05" <| testEval2 (TypeApply (TypeArrow (TypeVar 1) (TypeValue "String")) (TypeValue "Int")) Dict.empty
-            , test "06" <| testEval2 (TypeApply (TypeArrow (TypeVar 1) (TypeVar 1)) (TypeValue "Int")) Dict.empty
-            , test "07" <|
-                testEval2
-                    (TypeArrow (TypeVar 1) (TypeApply (TypeVar 2) (TypeVar 1)))
-                    (Dict.singleton 2 (TypeArrow (TypeValue "Int") (TypeValue "String")))
+            , test "*05" <| testEval "(\\a -> '') 1" Dict.empty
+            , test "*06" <| testEval "(\\a -> a) 1" Dict.empty
+            , test "*07" <| testEval "(\\a -> f a)" (Dict.singleton "f" "Int -> String")
             , test "08" <| testEval "if a b c" (Dict.singleton "if" "Bool -> a -> a -> a")
             , test "09" <| testEval "a 1" (Dict.singleton "a" "Int")
             , test "10" <| testEval "a 1" (Dict.singleton "a" "a")
