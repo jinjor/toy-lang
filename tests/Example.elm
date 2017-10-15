@@ -25,8 +25,8 @@ suite =
             , test "10" <| testCalc "\\a -> add a 1"
             , test "11" <| testCalc "\\a -> \\b -> 1"
             , test "12" <| testCalc "\\a -> \\b -> a"
-              -- , test "13" <| testCalc "let a = 1 in a"
-              -- , test "14" <| testCalc "let a = (\\a -> a) in a"
+            , test "13" <| testCalc "let a = 1 in a"
+            , test "14" <| testCalc "let a = (\\a -> a) in a"
             ]
           {-
              01: a -- env={}

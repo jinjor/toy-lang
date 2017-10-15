@@ -187,6 +187,7 @@ expression =
                 |= ref
                 |. spaces
                 |= lazy (\_ -> functionTail)
+            , lazy (\_ -> letin)
             ]
 
 
@@ -250,6 +251,27 @@ ref =
     inContext "ref" <|
         succeed Ref
             |= identifier
+
+
+letin : Parser Expression
+letin =
+    inContext "let in" <|
+        succeed
+            (\statement outer ->
+                case statement of
+                    Assignment id inner ->
+                        Let id inner outer
+
+                    _ ->
+                        Debug.crash "not implemented for now"
+            )
+            |. keyword "let"
+            |. spaces
+            |= statement
+            |. spaces
+            |. keyword "in"
+            |. spaces
+            |= lazy (\_ -> expression)
 
 
 number : Parser Expression
