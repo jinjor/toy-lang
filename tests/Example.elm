@@ -108,7 +108,7 @@ testCalc s _ =
 --             in
 --                 t
 --                     |> evaluate e
---                     |> Result.map Tuple.first
+--                     |> Result.map (Tuple.first >> formatType)
 --                     |> Debug.log s
 --                     |> always Expect.pass
 --
@@ -120,6 +120,6 @@ testEval : SimpleTyping.Type -> SimpleTyping.Env -> () -> Expectation
 testEval t e _ =
     t
         |> evaluate e
-        |> Result.map Tuple.first
+        |> Result.map (Tuple.first >> formatType)
         |> Debug.log "test-eval"
         |> always Expect.pass
