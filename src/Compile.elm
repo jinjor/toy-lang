@@ -7,7 +7,6 @@ import Toy.Checker as ToyChecker
 import Toy.Formatter as ToyFormatter
 import Toy.Generator as ToyGenerator
 import Toy.Translator as ToyTranslator
-import Toy.SimpleTyping
 import Parser
 import Task
 
