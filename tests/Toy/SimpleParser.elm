@@ -196,15 +196,17 @@ expression =
             , lazy (\_ -> lambda)
             , lazy (\_ -> letin)
             , succeed makeCall
-                |= ref
+                |= oneOf
+                    [ ref
+                    , succeed identity
+                        |. symbol "("
+                        |. spaces
+                        |= lazy (\_ -> expression)
+                        |. spaces
+                        |. symbol ")"
+                    ]
                 |. spaces
                 |= lazy (\_ -> functionTail)
-            , succeed identity
-                |. symbol "("
-                |. spaces
-                |= lazy (\_ -> expression)
-                |. spaces
-                |. symbol ")"
             ]
 
 
