@@ -199,8 +199,8 @@ apply env first second =
                 _ ->
                     apply env arg second
 
-        TypeValue _ ->
-            Err "value cannot take arguments"
+        TypeValue name ->
+            Err ("value " ++ name ++ " cannot take arguments")
 
         _ ->
             Ok ( TypeApply first second, env )

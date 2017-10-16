@@ -190,24 +190,10 @@ identifier =
 expression : Parser Expression
 expression =
     inContext "expression" <|
-        oneOf
-            [ number
-            , string
-            , lazy (\_ -> lambda)
-            , lazy (\_ -> letin)
-            , succeed makeCall
-                |= oneOf
-                    [ ref
-                    , succeed identity
-                        |. symbol "("
-                        |. spaces
-                        |= lazy (\_ -> expression)
-                        |. spaces
-                        |. symbol ")"
-                    ]
-                |. spaces
-                |= lazy (\_ -> functionTail)
-            ]
+        succeed makeCall
+            |= singleExpression
+            |. spaces
+            |= lazy (\_ -> functionTail)
 
 
 makeCall : Expression -> List Expression -> Expression
@@ -220,12 +206,30 @@ makeCall head tail =
             makeCall (Call head x) xs
 
 
+singleExpression : Parser Expression
+singleExpression =
+    inContext "single expression" <|
+        oneOf
+            [ number
+            , string
+            , lazy (\_ -> lambda)
+            , lazy (\_ -> letin)
+            , ref
+            , succeed identity
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ")"
+            ]
+
+
 functionTail : Parser (List Expression)
 functionTail =
     inContext "function tail" <|
         oneOf
             [ succeed (::)
-                |= lazy (\_ -> expression)
+                |= lazy (\_ -> singleExpression)
                 |. spaces
                 |= lazy (\_ -> functionTail)
             , succeed []
