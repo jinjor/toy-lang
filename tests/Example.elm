@@ -28,6 +28,7 @@ suite =
             , test "13" <| testFromExp "\\a -> \\a -> a"
             , test "14" <| testFromExp "let a = 1; in a"
             , test "15" <| testFromExp "let a = (\\a -> a); in a"
+            , test "16" <| testFromExp "let a = (\\a -> a); in f (a 1) (a '')"
             ]
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
@@ -43,6 +44,7 @@ suite =
             , test "11" <| testEval "a 1" (Dict.singleton "a" "Int -> String")
             , test "12" <| testEval "a 1" (Dict.singleton "a" "String -> Int")
             , test "13" <| testEval "a 1" (Dict.singleton "a" "a -> a")
+            , test "14" <| testEval "let a = (\\a -> a); in f (a 1) (a '')" Dict.empty
             ]
         ]
 
