@@ -93,6 +93,9 @@ fromExp n typeVars exp =
             in
                 ( TypeApply first second, n2, Dict.union dep dep2 )
 
+        Let [ Assignment name a ] b ->
+            fromExp n typeVars (Call (Lambda name b) a)
+
         Let statements b ->
             let
                 expDict =
