@@ -93,18 +93,51 @@ fromExp n typeVars exp =
             in
                 ( TypeApply first second, n2, Dict.union dep dep2 )
 
-        Let [ Assignment name a ] b ->
+        Let statements b ->
             let
-                ( first, n1, dep ) =
-                    fromExp n (Dict.insert name (TypeVar n) typeVars) a
+                expDict =
+                    makeExpDict statements
 
-                ( second, n2, dep2 ) =
-                    fromExp n1 (Dict.insert name first typeVars) b
+                ( localTypeVars, n1 ) =
+                    expDict
+                        |> Dict.keys
+                        |> List.foldl
+                            (\name ( dict, n ) ->
+                                ( Dict.insert name (TypeVar n) dict, n + 1 )
+                            )
+                            ( Dict.empty, n )
+
+                ( typeDict, n2, dep ) =
+                    expDict
+                        |> Dict.foldl
+                            (\name exp ( dict, n, dep ) ->
+                                let
+                                    ( t, n_, dep_ ) =
+                                        fromExp n (Dict.union localTypeVars typeVars) exp
+                                in
+                                    ( Dict.insert name t dict, n_, Dict.union dep_ dep )
+                            )
+                            ( Dict.empty, n1, Dict.empty )
+
+                ( t, n3, dep2 ) =
+                    fromExp n2 (Dict.union typeDict typeVars) b
             in
-                ( second, n2, Dict.union dep dep2 )
+                ( t, n3, Dict.union dep dep2 )
 
-        Let _ _ ->
-            Debug.crash "not implemented yet"
+
+makeExpDict : List Statement -> Dict String Expression
+makeExpDict statements =
+    statements
+        |> List.foldl
+            (\statement dict ->
+                case statement of
+                    Assignment name a ->
+                        Dict.insert name a dict
+
+                    _ ->
+                        Debug.crash "not implemented yet"
+            )
+            Dict.empty
 
 
 evaluate : Env -> Type -> Result String ( Type, Env )
