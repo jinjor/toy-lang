@@ -84,7 +84,7 @@ statement =
             |= identifier
             |. spaces
             |= oneOf
-                [ assignment
+                [ lazy (\_ -> assignment)
                 , typeSignature
                 ]
 
@@ -176,7 +176,7 @@ assignment =
         succeed (\exp id -> Assignment id exp)
             |. symbol "="
             |. spaces
-            |= expression
+            |= lazy (\_ -> expression)
 
 
 identifier : Parser Identifier
@@ -194,11 +194,11 @@ expression =
             [ number
             , string
             , lazy (\_ -> lambda)
+            , lazy (\_ -> letin)
             , succeed makeCall
                 |= ref
                 |. spaces
                 |= lazy (\_ -> functionTail)
-            , lazy (\_ -> letin)
             , succeed identity
                 |. symbol "("
                 |. spaces
@@ -276,7 +276,7 @@ letin =
         succeed Let
             |. keyword "let"
             |. spaces
-            |= onelineStatementsUntilIn
+            |= lazy (\_ -> onelineStatementsUntilIn)
             |. spaces
             |= lazy (\_ -> expression)
 
@@ -288,11 +288,11 @@ onelineStatementsUntilIn =
             [ succeed []
                 |. keyword "in"
             , succeed (::)
-                |= statement
+                |= lazy (\_ -> statement)
                 |. spaces
                 |. symbol ";"
+                |. spaces
                 |= lazy (\_ -> onelineStatementsUntilIn)
-            , succeed []
             ]
 
 

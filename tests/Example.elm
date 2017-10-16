@@ -26,8 +26,8 @@ suite =
             , test "11" <| testFromExp "\\a -> \\b -> 1"
             , test "12" <| testFromExp "\\a -> \\b -> a"
             , test "13" <| testFromExp "\\a -> \\a -> a"
-            , test "14" <| testFromExp "let a = 1 in a"
-            , test "15" <| testFromExp "let a = (\\a -> a) in a"
+            , test "14" <| testFromExp "let a = 1; in a"
+            , test "15" <| testFromExp "let a = (\\a -> a); in a"
             ]
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
