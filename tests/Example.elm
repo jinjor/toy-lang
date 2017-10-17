@@ -53,6 +53,7 @@ suite =
             , test "15" <| testEval "(\\a -> a 1) (\\a -> a)" Dict.empty
             , test "16" <| testEval "(\\a -> f (a 1)) (\\a -> a)" Dict.empty
             , test "17" <| testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" Dict.empty
+            , test "18" <| testEval "(\\a -> f (a 1) (a ''))" Dict.empty
             ]
         ]
 
