@@ -161,3 +161,47 @@ apply env first second =
 
         _ ->
             Ok ( TypeApply first second, env )
+
+
+match : Env -> Type -> Type -> Result String (Dict Int Type)
+match env first second =
+    case ( first, second ) of
+        ( TypeValue a, TypeValue b ) ->
+            if a == b then
+                Ok Dict.empty
+            else
+                Err ("type mismatch: expected " ++ a ++ " but got " ++ b)
+
+        ( TypeValue a, _ ) ->
+            Err ("type mismatch: expected " ++ a ++ " but got " ++ formatType second)
+
+        ( TypeVar id, _ ) ->
+            Ok (Dict.insert id second env)
+
+        -- a -> b, Int -> String
+        --    => a == Int && b == String
+        --    => Ok { a: Int, b: String }
+        -- a -> a, Int -> Int
+        --    => a == Int && a == Int == Int
+        --    => Ok { a: Int }
+        -- a -> a, Int -> String
+        --    => a == Int && a == Int == String
+        --    => Err
+        -- (a -> b) -> (a -> b), Int -> String
+        --    => (a -> b) == Int && (a -> b) == String
+        --    => Err
+        ( TypeArrow a1 a2, TypeArrow b1 b2 ) ->
+            match env a1 b1
+                |> Result.andThen
+                    (\localEnv ->
+                        apply (Dict.union localEnv env) a2 b2
+                    )
+
+        -- a -> a, String
+        --    => (a -> a) == String
+        --    => Err
+        ( TypeArrow a1 a2, _ ) ->
+            Err "too few arguments"
+
+        ( TypeApply, _ ) ->
+            Debug.crash "maybe a bug"
