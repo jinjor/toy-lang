@@ -213,7 +213,7 @@ singleExpression =
             [ number
             , string
             , lazy (\_ -> lambda)
-            , lazy (\_ -> letin)
+            , lazy (\_ -> doReturn)
             , ref
             , succeed identity
                 |. symbol "("
@@ -276,11 +276,11 @@ ref =
             |= identifier
 
 
-letin : Parser Expression
-letin =
-    inContext "let in" <|
+doReturn : Parser Expression
+doReturn =
+    inContext "do return" <|
         succeed makeLet
-            |. keyword "let"
+            |. keyword "do"
             |. spaces
             |= lazy (\_ -> onelineStatementsUntilIn)
             |. spaces
@@ -302,7 +302,7 @@ onelineStatementsUntilIn =
     inContext "oneline statements for debug" <|
         oneOf
             [ succeed []
-                |. keyword "in"
+                |. keyword "return"
             , succeed (::)
                 |= lazy (\_ -> assignment_)
                 |. spaces

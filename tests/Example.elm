@@ -30,11 +30,11 @@ suite =
             , test "11" <| testFromExp "\\a -> \\b -> 1"
             , test "12" <| testFromExp "\\a -> \\b -> a"
             , test "13" <| testFromExp "\\a -> \\a -> a"
-            , test "14" <| testFromExp "let a = 1; in a"
-            , test "15" <| testFromExp "let a = (\\a -> a); in a"
-            , test "16" <| testFromExp "let a = (\\a -> a); in f (a 1) (a '')"
+            , test "14" <| testFromExp "do a = 1; return a"
+            , test "15" <| testFromExp "do a = (\\a -> a); return a"
+            , test "16" <| testFromExp "do a = (\\a -> a); return f (a 1) (a '')"
             , test "17" <| testFromExp "(\\a -> f (a 1) (a '')) (\\a -> a)"
-            , test "18" <| testFromExp "let a=1;b=2;in add a b"
+            , test "18" <| testFromExp "do a=1;b=2; return add a b"
             ]
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
@@ -50,14 +50,14 @@ suite =
             , test "11" <| testEval "a 1" (Dict.singleton "a" "Int -> String")
             , test "12" <| testEval "a 1" (Dict.singleton "a" "String -> Int")
             , test "13" <| testEval "a 1" (Dict.singleton "a" "a -> a")
-            , test "14" <| testEval "let a = (\\a -> a); in f (a 1) (a '')" Dict.empty
+            , test "14" <| testEval "do a = (\\a -> a); return f (a 1) (a '')" Dict.empty
             , test "15" <| testEval "(\\a -> a 1) (\\a -> a)" Dict.empty
             , test "16" <| testEval "(\\a -> f (a 1)) (\\a -> a)" Dict.empty
             , test "17" <| testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" Dict.empty
             , test "18" <| testEval "(\\a -> f (a 1) (a ''))" Dict.empty
-            , test "19" <| testEval "let a=1;b=2;in add a b" Dict.empty
-            , test "20" <| testEval "let a=1;a='';in a" Dict.empty
-            , test "21" <| testEval "let a=1;b=a;b=b;in b" Dict.empty
+            , test "19" <| testEval "do a=1;b=2;return add a b" Dict.empty
+            , test "20" <| testEval "do a=1;a='';return a" Dict.empty
+            , test "21" <| testEval "do a=1;b=a;b=b;return b" Dict.empty
             ]
         ]
 
