@@ -45,6 +45,11 @@ suite =
             , test "06" <| testEval "(\\a -> a) 1" Dict.empty
             , test "07" <| testEval "(\\a -> f a)" (Dict.singleton "f" "Int -> String")
             , test "08" <| testEval "if a b c" (Dict.singleton "if" "Bool -> a -> a -> a")
+            , test "08.1" <| testEval "if 0 '' ''" (Dict.singleton "if" "Int -> a -> a -> a")
+            , test "08.2" <| testEval "if 0 0 ''" (Dict.singleton "if" "Int -> a -> a -> a")
+            , test "08.3" <| testEval "if 0 a ''" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "String" ) ])
+            , test "08.4" <| testEval "if 0 a ''" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "Int" ) ])
+            , test "08.5" <| testEval "if 0 '' a" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "Int" ) ])
             , test "09" <| testEval "a 1" (Dict.singleton "a" "Int")
             , test "10" <| testEval "a 1" (Dict.singleton "a" "a")
             , test "11" <| testEval "a 1" (Dict.singleton "a" "Int -> String")
@@ -63,6 +68,19 @@ suite =
                     (Dict.fromList
                         [ ( "map", "(a -> b) -> a -> b" )
                         , ( "toString", "Int -> String" )
+                        ]
+                    )
+            , test "23" <|
+                testEval "map 1"
+                    (Dict.fromList
+                        [ ( "map", "(a -> b) -> a -> b" )
+                        ]
+                    )
+            , test "24" <|
+                testEval "map a"
+                    (Dict.fromList
+                        [ ( "map", "(a -> b) -> a -> b" )
+                        , ( "a", "Int -> String -> Bool" )
                         ]
                     )
             ]
@@ -128,7 +146,14 @@ testEval s envSource _ =
                 in
                     t
                         |> evaluate env
-                        |> Result.map (Tuple.first >> formatType)
+                        -- |> Result.map
+                        --     (\( t, env ) ->
+                        --         formatType t
+                        --             ++ " "
+                        --             ++ toString (Dict.map (\_ -> formatType) env)
+                        --     )
+                        |>
+                            Result.map (\( t, env ) -> formatType t)
                         |> Debug.log s
                         |> always Expect.pass
 

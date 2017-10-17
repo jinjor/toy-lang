@@ -43,19 +43,19 @@ fromTypeExp t =
         SimpleParser.TypeVar name ->
             case name of
                 "a" ->
-                    TypeVar 1
+                    TypeVar 91
 
                 "b" ->
-                    TypeVar 2
+                    TypeVar 92
 
                 "c" ->
-                    TypeVar 3
+                    TypeVar 93
 
                 "d" ->
-                    TypeVar 4
+                    TypeVar 94
 
                 "e" ->
-                    TypeVar 5
+                    TypeVar 95
 
                 _ ->
                     Debug.crash "TODO"
@@ -140,21 +140,11 @@ apply : Env -> Type -> Type -> Result String ( Type, Env )
 apply env first second =
     case first of
         TypeArrow arg res ->
-            case ( arg, second ) of
-                ( TypeValue _, TypeVar id ) ->
-                    Ok ( first, Dict.insert id arg env )
-
-                ( TypeValue _, _ ) ->
-                    if arg == second then
-                        Ok ( res, env )
-                    else
-                        Err ("type mismatch: expected " ++ toString arg ++ " but got " ++ toString second)
-
-                ( TypeVar id, _ ) ->
-                    evaluate (Dict.insert id second env) res
-
-                _ ->
-                    apply env arg second
+            match env arg second
+                |> Result.andThen
+                    (\env ->
+                        evaluate env res
+                    )
 
         TypeValue name ->
             Err ("value " ++ name ++ " cannot take arguments")
@@ -163,14 +153,17 @@ apply env first second =
             Ok ( TypeApply first second, env )
 
 
-match : Env -> Type -> Type -> Result String (Dict Int Type)
+match : Env -> Type -> Type -> Result String Env
 match env first second =
     case ( first, second ) of
         ( TypeValue a, TypeValue b ) ->
             if a == b then
-                Ok Dict.empty
+                Ok env
             else
                 Err ("type mismatch: expected " ++ a ++ " but got " ++ b)
+
+        ( TypeValue a, TypeVar id ) ->
+            Ok (Dict.insert id first env)
 
         ( TypeValue a, _ ) ->
             Err ("type mismatch: expected " ++ a ++ " but got " ++ formatType second)
@@ -194,7 +187,7 @@ match env first second =
             match env a1 b1
                 |> Result.andThen
                     (\localEnv ->
-                        apply (Dict.union localEnv env) a2 b2
+                        match (Dict.union localEnv env) a2 b2
                     )
 
         -- a -> a, String
@@ -203,5 +196,5 @@ match env first second =
         ( TypeArrow a1 a2, _ ) ->
             Err "too few arguments"
 
-        ( TypeApply, _ ) ->
+        ( TypeApply _ _, _ ) ->
             Debug.crash "maybe a bug"
