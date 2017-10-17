@@ -58,6 +58,13 @@ suite =
             , test "19" <| testEval "do a=1;b=2;return add a b" Dict.empty
             , test "20" <| testEval "do a=1;a='';return a" Dict.empty
             , test "21" <| testEval "do a=1;b=a;b=b;return b" Dict.empty
+            , test "22" <|
+                testEval "map toString"
+                    (Dict.fromList
+                        [ ( "map", "(a -> b) -> a -> b" )
+                        , ( "toString", "Int -> String" )
+                        ]
+                    )
             ]
         ]
 
