@@ -34,6 +34,7 @@ suite =
             , test "15" <| testFromExp "let a = (\\a -> a); in a"
             , test "16" <| testFromExp "let a = (\\a -> a); in f (a 1) (a '')"
             , test "17" <| testFromExp "(\\a -> f (a 1) (a '')) (\\a -> a)"
+            , test "18" <| testFromExp "let a=1;b=2;in add a b"
             ]
         , describe "eval"
             [ test "01" <| testEval "a" Dict.empty
@@ -54,6 +55,9 @@ suite =
             , test "16" <| testEval "(\\a -> f (a 1)) (\\a -> a)" Dict.empty
             , test "17" <| testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" Dict.empty
             , test "18" <| testEval "(\\a -> f (a 1) (a ''))" Dict.empty
+            , test "19" <| testEval "let a=1;b=2;in add a b" Dict.empty
+            , test "20" <| testEval "let a=1;a='';in a" Dict.empty
+            , test "21" <| testEval "let a=1;b=a;b=b;in b" Dict.empty
             ]
         ]
 
