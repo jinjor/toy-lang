@@ -62,6 +62,7 @@ suite =
             , testEval "(\\a -> f (a 1)) (\\a -> a)" [] ""
             , testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" [] ""
             , testEval "(\\a -> f (a 1) (a ''))" [] ""
+            , testEval "f (a 1) (a '')" [ "a" => "a -> a", "f" => "b -> c -> b -> c" ] "(Int -> String)"
             , testEval "do a=1;b=2;return add a b" [] ""
             , testEval "do a=1;a='';return a" [] "String"
             , testEval "do a=1;b=a;b=b;return b" [] "Int"
@@ -79,6 +80,9 @@ suite =
                 , "a" => "Int -> String -> Bool"
                 ]
                 "(Int -> (String -> Bool))"
+            , testEval "do f = \\a -> a;return g (f 1) (f '')"
+                [ "g" => "Int -> String -> Bool" ]
+                "Bool"
             ]
         ]
 
@@ -91,7 +95,7 @@ logParseResult : String -> ( Type, Int, Dict String Int ) -> ( Type, Int, Dict S
 logParseResult s (( t, _, dep ) as r) =
     let
         _ =
-            Debug.log ("[parsed]    " ++ s)
+            Debug.log ("[parsed]  " ++ s)
                 (formatType t
                     ++ (if Dict.isEmpty dep then
                             ""
@@ -146,19 +150,12 @@ testEval s envSource_ expected =
                                     |> SimpleTyping.fromExp 0 Dict.empty
                                     |> logParseResult s
 
-                            env =
+                            envTypes =
                                 env_
-                                    |> Dict.toList
-                                    |> List.filterMap
-                                        (\( name, tExp ) ->
-                                            dep
-                                                |> Dict.get name
-                                                |> Maybe.map
-                                                    (\id ->
-                                                        ( id, SimpleTyping.fromTypeExp tExp )
-                                                    )
-                                        )
-                                    |> Dict.fromList
+                                    |> Dict.map (\id tExp -> SimpleTyping.fromTypeExp tExp)
+
+                            env =
+                                resolveDependencies envTypes dep
                         in
                             case evaluate env t of
                                 Ok ( t, env ) ->
@@ -167,7 +164,7 @@ testEval s envSource_ expected =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log ("[evauated]  " ++ input)
+                                            Debug.log ("[ok]      " ++ input)
                                                 (formatType t
                                                     ++ (if Dict.isEmpty env then
                                                             ""
@@ -187,7 +184,7 @@ testEval s envSource_ expected =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log ("[evauated]  " ++ input) e
+                                            Debug.log ("[err]     " ++ input) e
                                     in
                                         if expected == "" then
                                             Expect.pass
@@ -199,6 +196,22 @@ testEval s envSource_ expected =
                     Err e ->
                         Expect.fail (SimpleParser.formatError e)
             )
+
+
+resolveDependencies : Dict String Type -> Dict String Int -> Env
+resolveDependencies envTypes dep =
+    dep
+        |> Dict.toList
+        |> List.filterMap
+            (\( name, id ) ->
+                envTypes
+                    |> Dict.get name
+                    |> Maybe.map
+                        (\t ->
+                            ( id, t )
+                        )
+            )
+        |> Dict.fromList
 
 
 parseEnv : Dict String String -> Result Parser.Error (Dict String SimpleParser.TypeExp)

@@ -19,7 +19,7 @@ formatType : Type -> String
 formatType t =
     case t of
         TypeVar id ->
-            "$" ++ toString id
+            toString id
 
         TypeValue s ->
             s
@@ -28,7 +28,7 @@ formatType t =
             "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
 
         TypeApply t1 t2 ->
-            "app(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
+            "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
 fromTypeExp : TypeExp -> Type
