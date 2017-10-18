@@ -37,54 +37,57 @@ suite =
             , test "18" <| testFromExp "do a=1;b=2; return add a b"
             ]
         , describe "eval"
-            [ test "01" <| testEval "a" Dict.empty
-            , test "02" <| testEval "\\a -> b" Dict.empty
-            , test "03" <| testEval "\\a -> b" (Dict.singleton "b" "Int")
-            , test "04" <| testEval "\\a -> a" Dict.empty
-            , test "05" <| testEval "(\\a -> '') 1" Dict.empty
-            , test "06" <| testEval "(\\a -> a) 1" Dict.empty
-            , test "07" <| testEval "(\\a -> f a)" (Dict.singleton "f" "Int -> String")
-            , test "08" <| testEval "if a b c" (Dict.singleton "if" "Bool -> a -> a -> a")
-            , test "08.1" <| testEval "if 0 '' ''" (Dict.singleton "if" "Int -> a -> a -> a")
-            , test "08.2" <| testEval "if 0 0 ''" (Dict.singleton "if" "Int -> a -> a -> a")
-            , test "08.3" <| testEval "if 0 a ''" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "String" ) ])
-            , test "08.4" <| testEval "if 0 a ''" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "Int" ) ])
-            , test "08.5" <| testEval "if 0 '' a" (Dict.fromList [ ( "if", "Int -> a -> a -> a" ), ( "a", "Int" ) ])
-            , test "09" <| testEval "a 1" (Dict.singleton "a" "Int")
-            , test "10" <| testEval "a 1" (Dict.singleton "a" "a")
-            , test "11" <| testEval "a 1" (Dict.singleton "a" "Int -> String")
-            , test "12" <| testEval "a 1" (Dict.singleton "a" "String -> Int")
-            , test "13" <| testEval "a 1" (Dict.singleton "a" "a -> a")
-            , test "14" <| testEval "do a = (\\a -> a); return f (a 1) (a '')" Dict.empty
-            , test "15" <| testEval "(\\a -> a 1) (\\a -> a)" Dict.empty
-            , test "16" <| testEval "(\\a -> f (a 1)) (\\a -> a)" Dict.empty
-            , test "17" <| testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" Dict.empty
-            , test "18" <| testEval "(\\a -> f (a 1) (a ''))" Dict.empty
-            , test "19" <| testEval "do a=1;b=2;return add a b" Dict.empty
-            , test "20" <| testEval "do a=1;a='';return a" Dict.empty
-            , test "21" <| testEval "do a=1;b=a;b=b;return b" Dict.empty
+            [ test "01" <| testEval "a" [] ""
+            , test "02" <| testEval "\\a -> b" [] ""
+            , test "03" <| testEval "\\a -> b" [ "b" => "Int" ] ""
+            , test "04" <| testEval "\\a -> a" [] ""
+            , test "05" <| testEval "(\\a -> '') 1" [] "String"
+            , test "06" <| testEval "(\\a -> a) 1" [] "Int"
+            , test "07" <| testEval "(\\a -> f a)" [ "f" => "Int -> String" ] "(Int -> String)"
+            , test "08" <| testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
+            , test "08.1" <| testEval "if 0 '' ''" [ "if" => "Int -> a -> a -> a" ] "String"
+            , test "08.2" <| testEval "if 0 0 ''" [ "if" => "Int -> a -> a -> a" ] ""
+            , test "08.3" <| testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "String" ] ""
+            , test "08.4" <| testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] ""
+            , test "08.5" <| testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] ""
+            , test "08.6" <| testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a" ] "String"
+            , test "08.7" <| testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a" ] "String"
+            , test "09" <| testEval "a 1" [ "a" => "Int" ] ""
+            , test "10" <| testEval "a 1" [ "a" => "a" ] ""
+            , test "11" <| testEval "a 1" [ "a" => "Int -> String" ] "String"
+            , test "12" <| testEval "a 1" [ "a" => "String -> Int" ] ""
+            , test "13" <| testEval "a 1" [ "a" => "a -> a" ] ""
+            , test "14" <| testEval "do a = (\\a -> a); return f (a 1) (a '')" [] ""
+            , test "15" <| testEval "(\\a -> a 1) (\\a -> a)" [] ""
+            , test "16" <| testEval "(\\a -> f (a 1)) (\\a -> a)" [] ""
+            , test "17" <| testEval "(\\a -> f (a 1) (a '')) (\\a -> a)" [] ""
+            , test "18" <| testEval "(\\a -> f (a 1) (a ''))" [] ""
+            , test "19" <| testEval "do a=1;b=2;return add a b" [] ""
+            , test "20" <| testEval "do a=1;a='';return a" [] "String"
+            , test "21" <| testEval "do a=1;b=a;b=b;return b" [] "Int"
             , test "22" <|
                 testEval "map toString"
-                    (Dict.fromList
-                        [ ( "map", "(a -> b) -> a -> b" )
-                        , ( "toString", "Int -> String" )
-                        ]
-                    )
+                    [ "map" => "(a -> b) -> a -> b"
+                    , "toString" => "Int -> String"
+                    ]
+                    "(Int -> String)"
             , test "23" <|
                 testEval "map 1"
-                    (Dict.fromList
-                        [ ( "map", "(a -> b) -> a -> b" )
-                        ]
-                    )
+                    [ "map" => "(a -> b) -> a -> b"
+                    ]
+                    ""
             , test "24" <|
                 testEval "map a"
-                    (Dict.fromList
-                        [ ( "map", "(a -> b) -> a -> b" )
-                        , ( "a", "Int -> String -> Bool" )
-                        ]
-                    )
+                    [ "map" => "(a -> b) -> a -> b"
+                    , "a" => "Int -> String -> Bool"
+                    ]
+                    "(Int -> (String -> Bool))"
             ]
         ]
+
+
+(=>) =
+    (,)
 
 
 testFromExp : String -> () -> Expectation
@@ -101,9 +104,12 @@ testFromExp s _ =
             Expect.fail (SimpleParser.formatError e)
 
 
-testEval : String -> Dict String String -> () -> Expectation
-testEval s envSource _ =
+testEval : String -> List ( String, String ) -> String -> () -> Expectation
+testEval s envSource_ expected _ =
     let
+        envSource =
+            Dict.fromList envSource_
+
         parseResult =
             Parser.run SimpleParser.expression s
                 |> Result.andThen
@@ -144,18 +150,17 @@ testEval s envSource _ =
                                 )
                             |> Dict.fromList
                 in
-                    t
-                        |> evaluate env
-                        -- |> Result.map
-                        --     (\( t, env ) ->
-                        --         formatType t
-                        --             ++ " "
-                        --             ++ toString (Dict.map (\_ -> formatType) env)
-                        --     )
-                        |>
-                            Result.map (\( t, env ) -> formatType t)
-                        |> Debug.log s
-                        |> always Expect.pass
+                    case evaluate env t of
+                        Ok ( t, env ) ->
+                            if expected == "" then
+                                Debug.log s ( formatType t, Dict.map (\_ -> formatType) env )
+                                    |> always Expect.pass
+                            else
+                                Expect.equal expected (formatType t)
+
+                        Err e ->
+                            Debug.log s e
+                                |> always Expect.pass
 
             Err e ->
                 Expect.fail (SimpleParser.formatError e)
