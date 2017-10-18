@@ -120,18 +120,24 @@ testFromExp s =
 
 
 testEval : String -> List ( String, String ) -> String -> Test
-testEval s envSource expected =
-    test (s ++ " with " ++ toString envSource)
-        (\_ ->
-            let
-                parseResult =
-                    Parser.run SimpleParser.expression s
-                        |> Result.andThen
-                            (\exp ->
-                                parseEnv envSource
-                                    |> Result.map (\dict -> ( exp, dict ))
-                            )
-            in
+testEval s envSource_ expected =
+    let
+        envSource =
+            Dict.fromList envSource_
+
+        input =
+            (s ++ " with " ++ formatDict identity identity envSource)
+
+        parseResult =
+            Parser.run SimpleParser.expression s
+                |> Result.andThen
+                    (\exp ->
+                        parseEnv envSource
+                            |> Result.map (\dict -> ( exp, dict ))
+                    )
+    in
+        test input
+            (\_ ->
                 case parseResult of
                     Ok ( exp, env_ ) ->
                         let
@@ -161,7 +167,7 @@ testEval s envSource expected =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log ("[evauated]  " ++ s)
+                                            Debug.log ("[evauated]  " ++ input)
                                                 (formatType t
                                                     ++ (if Dict.isEmpty env then
                                                             ""
@@ -181,7 +187,7 @@ testEval s envSource expected =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log s e
+                                            Debug.log ("[evauated]  " ++ input) e
                                     in
                                         if expected == "" then
                                             Expect.pass
@@ -192,12 +198,12 @@ testEval s envSource expected =
 
                     Err e ->
                         Expect.fail (SimpleParser.formatError e)
-        )
+            )
 
 
-parseEnv : List ( String, String ) -> Result Parser.Error (Dict String SimpleParser.TypeExp)
+parseEnv : Dict String String -> Result Parser.Error (Dict String SimpleParser.TypeExp)
 parseEnv envSource =
-    Dict.fromList envSource
+    envSource
         |> Dict.map (\_ s -> Parser.run SimpleParser.typeExp s)
         |> Dict.foldl
             (\name result results ->
