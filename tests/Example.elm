@@ -87,6 +87,22 @@ suite =
     (,)
 
 
+logParseResult : String -> ( Type, Int, Dict String Int ) -> ( Type, Int, Dict String Int )
+logParseResult s (( t, _, dep ) as r) =
+    let
+        _ =
+            Debug.log ("[parsed]    " ++ s)
+                (formatType t
+                    ++ (if Dict.isEmpty dep then
+                            ""
+                        else
+                            " with " ++ formatDict identity toString dep
+                       )
+                )
+    in
+        r
+
+
 testFromExp : String -> Test
 testFromExp s =
     test s
@@ -95,17 +111,7 @@ testFromExp s =
                 Ok exp ->
                     exp
                         |> SimpleTyping.fromExp 0 Dict.empty
-                        |> (\( t, _, env ) -> ( t, env ))
-                        |> (\( t, dep ) ->
-                                Debug.log s
-                                    (formatType t
-                                        ++ (if Dict.isEmpty dep then
-                                                ""
-                                            else
-                                                " with " ++ formatDict identity toString dep
-                                           )
-                                    )
-                           )
+                        |> logParseResult s
                         |> always Expect.pass
 
                 Err e ->
@@ -132,6 +138,7 @@ testEval s envSource expected =
                             ( t, _, dep ) =
                                 exp
                                     |> SimpleTyping.fromExp 0 Dict.empty
+                                    |> logParseResult s
 
                             env =
                                 env_
@@ -149,27 +156,39 @@ testEval s envSource expected =
                         in
                             case evaluate env t of
                                 Ok ( t, env ) ->
-                                    if expected == "" then
-                                        (formatType t
-                                            ++ (if Dict.isEmpty env then
-                                                    ""
-                                                else
-                                                    " with " ++ formatDict toString formatType env
-                                               )
-                                        )
-                                            |> Debug.log s
-                                            |> always Expect.pass
-                                    else
-                                        Expect.equal expected (formatType t)
+                                    let
+                                        _ =
+                                            Debug.log "" ""
+
+                                        _ =
+                                            Debug.log ("[evauated]  " ++ s)
+                                                (formatType t
+                                                    ++ (if Dict.isEmpty env then
+                                                            ""
+                                                        else
+                                                            " with " ++ formatDict toString formatType env
+                                                       )
+                                                )
+                                    in
+                                        if expected == "" then
+                                            Expect.pass
+                                        else
+                                            Expect.equal expected (formatType t)
 
                                 Err e ->
-                                    if expected == "" then
-                                        Debug.log s e
-                                            |> always Expect.pass
-                                    else
-                                        e
-                                            |> String.contains expected
-                                            |> Expect.true (e ++ " should contain " ++ expected)
+                                    let
+                                        _ =
+                                            Debug.log "" ""
+
+                                        _ =
+                                            Debug.log s e
+                                    in
+                                        if expected == "" then
+                                            Expect.pass
+                                        else
+                                            e
+                                                |> String.contains expected
+                                                |> Expect.true (e ++ " should contain " ++ expected)
 
                     Err e ->
                         Expect.fail (SimpleParser.formatError e)
