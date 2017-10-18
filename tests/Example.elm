@@ -228,17 +228,3 @@ parseEnv envSource =
                         )
             )
             (Ok Dict.empty)
-
-
-formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
-formatDict formatKey formatValue dict =
-    "{ "
-        ++ (dict
-                |> Dict.toList
-                |> List.map
-                    (\( key, value ) ->
-                        formatKey key ++ " => " ++ formatValue value
-                    )
-                |> String.join ", "
-           )
-        ++ " }"

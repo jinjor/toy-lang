@@ -88,8 +88,11 @@ fromExp n typeVars exp =
                 ( first, n1, dep ) =
                     fromExp n typeVars a
 
+                rightTypeVars =
+                    Dict.union (Dict.map (\_ id -> TypeVar id) dep) typeVars
+
                 ( second, n2, dep2 ) =
-                    fromExp n1 typeVars b
+                    fromExp n1 rightTypeVars b
             in
                 ( TypeApply first second, n2, Dict.union dep dep2 )
 
@@ -97,43 +100,64 @@ fromExp n typeVars exp =
             fromExp n typeVars (Call (Lambda name b) a)
 
 
+debugEval : Env -> Type -> Result String ( Type, Env ) -> Result String ( Type, Env )
+debugEval env t r =
+    let
+        _ =
+            Debug.log "evaluated" <|
+                case r of
+                    Ok ( t, env ) ->
+                        formatDict toString formatType env ++ " " ++ formatType t
+
+                    Err s ->
+                        s
+    in
+        r
+
+
 evaluate : Env -> Type -> Result String ( Type, Env )
 evaluate env t =
-    case t of
-        TypeArrow arg right ->
-            evaluate env right
-                |> Result.map
-                    (\( r, env ) ->
-                        case arg of
-                            TypeVar id ->
-                                env
-                                    |> Dict.get id
-                                    |> Maybe.map
-                                        (\t ->
-                                            ( TypeArrow t r, env )
-                                        )
-                                    |> Maybe.withDefault ( TypeArrow arg r, env )
+    debugEval env t <|
+        case t of
+            TypeArrow arg right ->
+                evaluate env right
+                    |> Result.map
+                        (\( r, env ) ->
+                            case arg of
+                                TypeVar id ->
+                                    env
+                                        |> Dict.get id
+                                        |> Maybe.map
+                                            (\t ->
+                                                ( TypeArrow t r, env )
+                                            )
+                                        |> Maybe.withDefault ( TypeArrow arg r, env )
 
-                            _ ->
-                                ( TypeArrow arg r, env )
+                                _ ->
+                                    ( TypeArrow arg r, env )
+                        )
+
+            TypeApply first second ->
+                evaluate env first
+                    |> Result.andThen
+                        (\( first, env ) ->
+                            evaluate env second
+                                |> Result.andThen
+                                    (\( second, env ) ->
+                                        apply env first second
+                                    )
+                        )
+
+            TypeVar id ->
+                Ok
+                    ( env
+                        |> Dict.get id
+                        |> Maybe.withDefault t
+                    , env
                     )
 
-        TypeApply first second ->
-            evaluate env first
-                |> Result.andThen
-                    (\( first, env ) ->
-                        evaluate env second
-                            |> Result.andThen
-                                (\( second, env ) ->
-                                    apply env first second
-                                )
-                    )
-
-        TypeVar id ->
-            Ok ( env |> Dict.get id |> Maybe.withDefault t, env )
-
-        _ ->
-            Ok ( t, env )
+            _ ->
+                Ok ( t, env )
 
 
 apply : Env -> Type -> Type -> Result String ( Type, Env )
@@ -198,3 +222,17 @@ match env first second =
 
         ( TypeApply _ _, _ ) ->
             Debug.crash "maybe a bug"
+
+
+formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
+formatDict formatKey formatValue dict =
+    "{ "
+        ++ (dict
+                |> Dict.toList
+                |> List.map
+                    (\( key, value ) ->
+                        formatKey key ++ " => " ++ formatValue value
+                    )
+                |> String.join ", "
+           )
+        ++ " }"
