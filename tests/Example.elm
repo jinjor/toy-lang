@@ -46,17 +46,17 @@ suite =
             , testEval "(\\a -> f a)" [ "f" => "Int -> String" ] "(Int -> String)"
             , testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
             , testEval "if 0 '' ''" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 0 0 ''" [ "if" => "Int -> a -> a -> a" ] ""
-            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "String" ] ""
-            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] ""
-            , testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] ""
+            , testEval "if 0 0 ''" [ "if" => "Int -> a -> a -> a" ] "expected Int"
+            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
+            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected Int"
+            , testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected String"
             , testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a" ] "String"
             , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a" ] "String"
             , testEval "a 1" [ "a" => "Int" ] ""
             , testEval "a 1" [ "a" => "a" ] ""
             , testEval "a 1" [ "a" => "Int -> String" ] "String"
-            , testEval "a 1" [ "a" => "String -> Int" ] ""
-            , testEval "a 1" [ "a" => "a -> a" ] ""
+            , testEval "a 1" [ "a" => "String -> Int" ] "expected String"
+            , testEval "a 1" [ "a" => "a -> a" ] "Int"
             , testEval "do a = (\\a -> a); return f (a 1) (a '')" [] ""
             , testEval "(\\a -> a 1) (\\a -> a)" [] ""
             , testEval "(\\a -> f (a 1)) (\\a -> a)" [] ""
@@ -96,7 +96,16 @@ testFromExp s =
                     exp
                         |> SimpleTyping.fromExp 0 Dict.empty
                         |> (\( t, _, env ) -> ( t, env ))
-                        |> (\( t, dep ) -> Debug.log s (formatType t))
+                        |> (\( t, dep ) ->
+                                Debug.log s
+                                    (formatType t
+                                        ++ (if Dict.isEmpty dep then
+                                                ""
+                                            else
+                                                " with " ++ formatDict identity toString dep
+                                           )
+                                    )
+                           )
                         |> always Expect.pass
 
                 Err e ->
@@ -141,7 +150,14 @@ testEval s envSource expected =
                             case evaluate env t of
                                 Ok ( t, env ) ->
                                     if expected == "" then
-                                        Debug.log s ( formatType t, Dict.map (\_ -> formatType) env )
+                                        (formatType t
+                                            ++ (if Dict.isEmpty env then
+                                                    ""
+                                                else
+                                                    " with " ++ formatDict toString formatType env
+                                               )
+                                        )
+                                            |> Debug.log s
                                             |> always Expect.pass
                                     else
                                         Expect.equal expected (formatType t)
@@ -174,3 +190,17 @@ parseEnv envSource =
                         )
             )
             (Ok Dict.empty)
+
+
+formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
+formatDict formatKey formatValue dict =
+    "{ "
+        ++ (dict
+                |> Dict.toList
+                |> List.map
+                    (\( key, value ) ->
+                        formatKey key ++ " => " ++ formatValue value
+                    )
+                |> String.join ", "
+           )
+        ++ " }"
