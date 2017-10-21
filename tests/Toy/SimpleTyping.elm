@@ -100,12 +100,16 @@ fromExp n typeVars exp =
             fromExp n typeVars (Call (Lambda name b) a)
 
 
-debugEval : Env -> Type -> String
+debugEval : Env -> Type -> Type
 debugEval env t =
-    Debug.log "eval" <|
-        formatDict toString formatType env
-            ++ " "
-            ++ formatType t
+    let
+        _ =
+            Debug.log "eval" <|
+                formatDict toString formatType env
+                    ++ " "
+                    ++ formatType t
+    in
+        t
 
 
 assignEnv : Env -> Type -> Type
@@ -138,70 +142,62 @@ lookup env t =
 
 evaluate : Env -> Type -> Result String ( Type, Env )
 evaluate env t =
-    let
-        _ =
-            debugEval env t
-    in
-        case t of
-            TypeArrow arg right ->
-                evaluate env arg
-                    |> Result.andThen
-                        (\( arg, env ) ->
-                            evaluate env right
-                                |> Result.map
-                                    (\( right, env ) ->
-                                        ( TypeArrow (assignEnv env arg) right
-                                        , env
-                                        )
+    case debugEval env t of
+        TypeArrow arg right ->
+            evaluate env arg
+                |> Result.andThen
+                    (\( arg, env ) ->
+                        evaluate env right
+                            |> Result.map
+                                (\( right, env ) ->
+                                    ( TypeArrow (assignEnv env arg) right
+                                    , env
                                     )
-                        )
+                                )
+                    )
 
-            TypeApply (TypeArrow arg right) second ->
-                match env arg second
-                    |> Result.andThen
-                        (\env ->
-                            evaluate env right
-                        )
+        TypeApply (TypeArrow arg right) second ->
+            match env arg second
+                |> Result.andThen
+                    (\env ->
+                        evaluate env right
+                    )
 
-            TypeApply first second ->
-                evaluate env first
-                    |> Result.andThen
-                        (\( first, env ) ->
-                            evaluate env second
-                                |> Result.andThen
-                                    (\( second, env ) ->
-                                        apply env first second
-                                    )
-                        )
+        TypeApply first second ->
+            evaluate env first
+                |> Result.andThen
+                    (\( first, env ) ->
+                        evaluate env second
+                            |> Result.andThen
+                                (\( second, env ) ->
+                                    apply env first second
+                                )
+                    )
 
-            _ ->
-                Ok ( assignEnv env t, env )
+        _ ->
+            Ok ( assignEnv env t, env )
 
 
 apply : Env -> Type -> Type -> Result String ( Type, Env )
 apply env first second =
-    let
-        _ =
-            Debug.log "apply" ( first, second )
-    in
-        case first of
-            TypeArrow arg res ->
-                match env arg second
-                    |> Result.andThen
-                        (\env ->
-                            evaluate env (assignEnv env res)
-                        )
+    case first of
+        TypeArrow arg res ->
+            match env arg second
+                |> Result.andThen
+                    (\env ->
+                        evaluate env (assignEnv env res)
+                    )
 
-            TypeValue name ->
-                Err ("value " ++ name ++ " cannot take arguments")
+        TypeValue name ->
+            Err ("value " ++ name ++ " cannot take arguments")
 
-            _ ->
-                Ok ( TypeApply first second, env )
+        _ ->
+            Ok ( TypeApply first second, env )
 
 
 match : Env -> Type -> Type -> Result String Env
 match env first second =
-    case Debug.log "match" ( first, second ) of
+    case ( first, second ) of
         ( TypeValue a, TypeValue b ) ->
             if a == b then
                 Ok env
@@ -217,18 +213,6 @@ match env first second =
         ( TypeVar id, _ ) ->
             Ok (Dict.insert id second env)
 
-        -- a -> b, Int -> String
-        --    => a == Int && b == String
-        --    => Ok { a: Int, b: String }
-        -- a -> a, Int -> Int
-        --    => a == Int && a == Int == Int
-        --    => Ok { a: Int }
-        -- a -> a, Int -> String
-        --    => a == Int && a == Int == String
-        --    => Err
-        -- (a -> b) -> (a -> b), Int -> String
-        --    => (a -> b) == Int && (a -> b) == String
-        --    => Err
         ( TypeArrow a1 a2, TypeArrow b1 b2 ) ->
             match env a1 b1
                 |> Result.andThen
@@ -236,9 +220,6 @@ match env first second =
                         match env a2 b2
                     )
 
-        -- a -> a, String
-        --    => (a -> a) == String
-        --    => Err
         ( TypeArrow a1 a2, _ ) ->
             Err "too few arguments"
 
