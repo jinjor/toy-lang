@@ -116,7 +116,7 @@ assignEnv : Env -> Type -> Type
 assignEnv env t =
     case t of
         TypeArrow arg right ->
-            TypeArrow arg (assignEnv env right)
+            TypeArrow (assignEnv env arg) (assignEnv env right)
 
         TypeApply first second ->
             TypeApply (assignEnv env first) (assignEnv env second)
@@ -170,29 +170,24 @@ evaluate env t =
                         evaluate env second
                             |> Result.andThen
                                 (\( second, env ) ->
-                                    apply env first second
+                                    case first of
+                                        TypeArrow arg res ->
+                                            match env arg second
+                                                |> Result.andThen
+                                                    (\env ->
+                                                        evaluate env res
+                                                    )
+
+                                        TypeValue name ->
+                                            Err ("value " ++ name ++ " cannot take arguments")
+
+                                        _ ->
+                                            Ok ( TypeApply first second, env )
                                 )
                     )
 
         _ ->
             Ok ( assignEnv env t, env )
-
-
-apply : Env -> Type -> Type -> Result String ( Type, Env )
-apply env first second =
-    case first of
-        TypeArrow arg res ->
-            match env arg second
-                |> Result.andThen
-                    (\env ->
-                        evaluate env res
-                    )
-
-        TypeValue name ->
-            Err ("value " ++ name ++ " cannot take arguments")
-
-        _ ->
-            Ok ( TypeApply first second, env )
 
 
 match : Env -> Type -> Type -> Result String Env
