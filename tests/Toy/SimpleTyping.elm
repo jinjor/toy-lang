@@ -185,7 +185,7 @@ apply env first second =
             match env arg second
                 |> Result.andThen
                     (\env ->
-                        evaluate env (assignEnv env res)
+                        evaluate env res
                     )
 
         TypeValue name ->
