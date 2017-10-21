@@ -108,35 +108,20 @@ debugEval env t =
             ++ formatType t
 
 
-assignEnv : Env -> Type -> Result String ( Type, Env )
+assignEnv : Env -> Type -> Type
 assignEnv env t =
     case t of
         TypeArrow arg right ->
-            assignEnv env right
-                |> Result.map
-                    (\( r, env ) ->
-                        ( TypeArrow arg r, env )
-                    )
+            TypeArrow arg (assignEnv env right)
 
         TypeApply first second ->
-            assignEnv env first
-                |> Result.andThen
-                    (\( first, env ) ->
-                        assignEnv env second
-                            |> Result.map
-                                (\( second, env ) ->
-                                    ( TypeApply first second, env )
-                                )
-                    )
+            TypeApply (assignEnv env first) (assignEnv env second)
 
         TypeVar id ->
-            Ok
-                ( lookup env t
-                , env
-                )
+            lookup env t
 
         TypeValue _ ->
-            Ok ( t, env )
+            t
 
 
 lookup : Env -> Type -> Type
@@ -163,13 +148,11 @@ evaluate env t =
                     |> Result.andThen
                         (\( arg, env ) ->
                             evaluate env right
-                                |> Result.andThen
+                                |> Result.map
                                     (\( right, env ) ->
-                                        assignEnv env arg
-                                            |> Result.map
-                                                (\( arg, env ) ->
-                                                    ( TypeArrow arg right, env )
-                                                )
+                                        ( TypeArrow (assignEnv env arg) right
+                                        , env
+                                        )
                                     )
                         )
 
@@ -192,7 +175,7 @@ evaluate env t =
                         )
 
             _ ->
-                assignEnv env t
+                Ok ( assignEnv env t, env )
 
 
 apply : Env -> Type -> Type -> Result String ( Type, Env )
@@ -206,11 +189,7 @@ apply env first second =
                 match env arg second
                     |> Result.andThen
                         (\env ->
-                            assignEnv env res
-                                |> Result.andThen
-                                    (\( res, env ) ->
-                                        evaluate env res
-                                    )
+                            evaluate env (assignEnv env res)
                         )
 
             TypeValue name ->
