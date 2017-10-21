@@ -100,24 +100,20 @@ fromExp n typeVars exp =
             fromExp n typeVars (Call (Lambda name b) a)
 
 
-debugEval : Env -> Type -> Result String ( Type, Env ) -> Result String ( Type, Env )
-debugEval env t r =
-    let
-        _ =
-            Debug.log "evaluated" <|
-                case r of
-                    Ok ( t, env ) ->
-                        formatDict toString formatType env ++ " " ++ formatType t
-
-                    Err s ->
-                        s
-    in
-        r
+debugEval : Env -> Type -> String
+debugEval env t =
+    Debug.log "eval" <|
+        formatDict toString formatType env
+            ++ " "
+            ++ formatType t
 
 
 evaluate : Env -> Type -> Result String ( Type, Env )
 evaluate env t =
-    debugEval env t <|
+    let
+        _ =
+            debugEval env t
+    in
         case t of
             TypeArrow arg right ->
                 evaluate env right
@@ -163,6 +159,9 @@ evaluate env t =
 apply : Env -> Type -> Type -> Result String ( Type, Env )
 apply env first second =
     case first of
+        TypeArrow (TypeVar id) res ->
+            evaluate (Dict.insert id second env) res
+
         TypeArrow arg res ->
             match env arg second
                 |> Result.andThen
