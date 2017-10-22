@@ -197,7 +197,7 @@ match env first second =
     case ( first, second ) of
         ( TypeValue a, TypeValue b ) ->
             if a == b then
-                Ok env
+                matchTypeArgs env [] []
             else
                 Err ("type mismatch: expected " ++ a ++ " but got " ++ b)
 
@@ -222,6 +222,26 @@ match env first second =
 
         ( TypeApply _ _, _ ) ->
             Debug.crash "maybe a bug"
+
+
+matchTypeArgs : Env -> List Type -> List Type -> Result String Env
+matchTypeArgs env first second =
+    case ( first, second ) of
+        ( [], [] ) ->
+            Ok env
+
+        ( x :: xs, y :: ys ) ->
+            match env x y
+                |> Result.andThen
+                    (\env ->
+                        matchTypeArgs env xs ys
+                    )
+
+        ( [], _ ) ->
+            Err "too many type arguments"
+
+        ( _, [] ) ->
+            Err "too few type arguments"
 
 
 formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
