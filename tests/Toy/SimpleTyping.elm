@@ -31,34 +31,30 @@ formatType t =
             "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
-fromTypeExp : TypeExp -> Type
-fromTypeExp t =
+fromTypeExp : Int -> Dict String Type -> TypeExp -> ( Type, Int, Dict String Type )
+fromTypeExp n typeVars t =
     case t of
         SimpleParser.ArrowType t1 t2 ->
-            TypeArrow (fromTypeExp t1) (fromTypeExp t2)
+            fromTypeExp n typeVars t1
+                |> (\( t1, n, typeVars ) ->
+                        fromTypeExp n typeVars t2
+                            |> (\( t2, n, typeVars ) ->
+                                    ( TypeArrow t1 t2, n, typeVars )
+                               )
+                   )
 
         SimpleParser.TypeValue constructor _ ->
-            TypeValue constructor
+            ( TypeValue constructor, n, typeVars )
 
         SimpleParser.TypeVar name ->
-            case name of
-                "a" ->
-                    TypeVar 91
-
-                "b" ->
-                    TypeVar 92
-
-                "c" ->
-                    TypeVar 93
-
-                "d" ->
-                    TypeVar 94
-
-                "e" ->
-                    TypeVar 95
-
-                _ ->
-                    Debug.crash "TODO"
+            typeVars
+                |> Dict.get name
+                |> Maybe.map (\t -> ( t, n, typeVars ))
+                |> Maybe.withDefault
+                    ( TypeVar n
+                    , n + 1
+                    , Dict.insert name (TypeVar n) typeVars
+                    )
 
 
 fromExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )

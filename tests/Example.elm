@@ -47,12 +47,12 @@ suite =
             , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] "Int"
             , testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
             , testEval "if 0 '' ''" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 0 0 ''" [ "if" => "Int -> a -> a -> a" ] "expected Int"
-            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
-            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected Int"
-            , testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected String"
-            , testEval "if 0 '' a" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 0 a ''" [ "if" => "Int -> a -> a -> a" ] "String"
+            , testEval "if 1 0 ''" [ "if" => "Int -> a -> a -> a" ] "expected Int"
+            , testEval "if 2 a ''" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
+            , testEval "if 3 a ''" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected Int"
+            , testEval "if 4 '' a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected String"
+            , testEval "if 5 '' a" [ "if" => "Int -> a -> a -> a" ] "String"
+            , testEval "if 6 a ''" [ "if" => "Int -> a -> a -> a" ] "String"
             , testEval "a 1" [ "a" => "Int" ] "argument"
             , testEval "a 1" [ "a" => "a" ] ""
             , testEval "a 1" [ "a" => "Int -> String" ] "String"
@@ -146,14 +146,18 @@ testEval s envSource_ expected =
                 case parseResult of
                     Ok ( exp, env_ ) ->
                         let
-                            ( t, _, dep ) =
+                            ( t, n, dep ) =
                                 exp
                                     |> SimpleTyping.fromExp 0 Dict.empty
                                     |> logParseResult s
 
                             envTypes =
                                 env_
-                                    |> Dict.map (\id tExp -> SimpleTyping.fromTypeExp tExp)
+                                    |> Dict.map
+                                        (\id tExp ->
+                                            SimpleTyping.fromTypeExp n Dict.empty tExp
+                                                |> (\( t, _, _ ) -> t)
+                                        )
 
                             env =
                                 resolveDependencies envTypes dep
