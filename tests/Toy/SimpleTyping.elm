@@ -10,7 +10,7 @@ type alias Env =
 
 type Type
     = TypeVar Int
-    | TypeValue String
+    | TypeValue String (List Type)
     | TypeArrow Type Type
     | TypeApply Type Type
 
@@ -21,8 +21,8 @@ formatType t =
         TypeVar id ->
             toString id
 
-        TypeValue s ->
-            s
+        TypeValue s args ->
+            String.join " " (s :: List.map formatType args)
 
         TypeArrow t1 t2 ->
             "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
@@ -43,8 +43,19 @@ fromTypeExp n typeVars t =
                                )
                    )
 
-        SimpleParser.TypeValue constructor _ ->
-            ( TypeValue constructor, n, typeVars )
+        SimpleParser.TypeValue constructor args ->
+            args
+                |> List.foldl
+                    (\arg ( argTypes, n, typeVars ) ->
+                        fromTypeExp n typeVars arg
+                            |> (\( argType, n, typeVars ) ->
+                                    ( argTypes ++ [ argType ], n, typeVars )
+                               )
+                    )
+                    ( [], n, typeVars )
+                |> (\( argTypes, n, typeVars ) ->
+                        ( TypeValue constructor argTypes, n, typeVars )
+                   )
 
         SimpleParser.TypeVar name ->
             typeVars
@@ -61,10 +72,10 @@ fromExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int 
 fromExp n typeVars exp =
     case exp of
         IntLiteral _ ->
-            ( TypeValue "Int", n, Dict.empty )
+            ( TypeValue "Int" [], n, Dict.empty )
 
         StringLiteral _ ->
-            ( TypeValue "String", n, Dict.empty )
+            ( TypeValue "String" [], n, Dict.empty )
 
         Ref a ->
             typeVars
@@ -120,8 +131,8 @@ assignEnv env t =
         TypeVar id ->
             lookup env t
 
-        TypeValue _ ->
-            t
+        TypeValue constructor args ->
+            TypeValue constructor (List.map (assignEnv env) args)
 
 
 lookup : Env -> Type -> Type
@@ -173,7 +184,7 @@ apply env first second =
                                 )
                     )
 
-        TypeValue name ->
+        TypeValue name _ ->
             Err ("value " ++ name ++ " cannot take arguments")
 
         _ ->
@@ -184,7 +195,7 @@ apply env first second =
                             TypeArrow _ _ ->
                                 apply env first second
 
-                            TypeValue _ ->
+                            TypeValue _ _ ->
                                 apply env first second
 
                             _ ->
@@ -195,17 +206,17 @@ apply env first second =
 match : Env -> Type -> Type -> Result String Env
 match env first second =
     case ( first, second ) of
-        ( TypeValue a, TypeValue b ) ->
-            if a == b then
-                matchTypeArgs env [] []
+        ( TypeValue c1 args1, TypeValue c2 args2 ) ->
+            if c1 == c2 then
+                matchTypeArgs env args1 args2
             else
-                Err ("type mismatch: expected " ++ a ++ " but got " ++ b)
+                Err ("type mismatch: expected " ++ formatType first ++ " but got " ++ formatType second)
 
-        ( TypeValue a, TypeVar id ) ->
+        ( TypeValue a _, TypeVar id ) ->
             Ok (Dict.insert id first env)
 
-        ( TypeValue a, _ ) ->
-            Err ("type mismatch: expected " ++ a ++ " but got " ++ formatType second)
+        ( TypeValue a _, _ ) ->
+            Err ("type mismatch: expected " ++ formatType first ++ " but got " ++ formatType second)
 
         ( TypeVar id, _ ) ->
             Ok (Dict.insert id second env)

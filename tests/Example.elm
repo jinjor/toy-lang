@@ -84,6 +84,20 @@ suite =
             , testEval "do f = \\a -> a;return g (f 1) (f \"\")"
                 [ "g" => "Int -> String -> Bool" ]
                 "Bool"
+            , testEval "a 1" [ "a" => "a -> A a" ] "A Int"
+            , testEval "map toString list"
+                [ "map" => "(a -> b) -> List a -> List b"
+                , "toString" => "Int -> String"
+                , "list" => "List Int"
+                ]
+                "List String"
+            , testEval "map toString (cons 1 nil)"
+                [ "map" => "(a -> b) -> List a -> List b"
+                , "toString" => "Int -> String"
+                , "cons" => "a -> List a -> List a"
+                , "nil" => "List a"
+                ]
+                "List String"
             ]
         ]
 
