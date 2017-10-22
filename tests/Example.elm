@@ -197,7 +197,7 @@ testEval s envSource_ expected =
                                         else
                                             Expect.equal expected (formatType t)
 
-                                Err e ->
+                                Err (Error range e) ->
                                     let
                                         _ =
                                             Debug.log "" ""

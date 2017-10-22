@@ -1,5 +1,6 @@
 module Toy.SimpleTyping exposing (..)
 
+import Toy.Parser exposing (Range, Position)
 import Toy.SimpleParser as SimpleParser exposing (..)
 import Dict exposing (Dict)
 
@@ -13,6 +14,15 @@ type Type
     | TypeValue String (List Type)
     | TypeArrow Type Type
     | TypeApply Type Type
+
+
+type Error
+    = Error Range String
+
+
+mockRange : Range
+mockRange =
+    Range (Position 0 0) (Position 0 0)
 
 
 formatType : Type -> String
@@ -147,7 +157,7 @@ lookup env t =
             t
 
 
-evaluate : Env -> Type -> Result String ( Type, Env )
+evaluate : Env -> Type -> Result Error ( Type, Env )
 evaluate env t =
     case debugEval env t of
         TypeArrow arg right ->
@@ -170,7 +180,7 @@ evaluate env t =
             Ok ( assignEnv env t, env )
 
 
-apply : Env -> Type -> Type -> Result String ( Type, Env )
+apply : Env -> Type -> Type -> Result Error ( Type, Env )
 apply env first second =
     case first of
         TypeArrow arg right ->
@@ -178,6 +188,7 @@ apply env first second =
                 |> Result.andThen
                     (\( second, env ) ->
                         match env arg second
+                            |> Result.mapError (\s -> Error mockRange s)
                             |> Result.andThen
                                 (\env ->
                                     evaluate env right
@@ -185,7 +196,7 @@ apply env first second =
                     )
 
         TypeValue name _ ->
-            Err ("value " ++ name ++ " cannot take arguments")
+            Err (Error mockRange <| "value " ++ name ++ " cannot take arguments")
 
         _ ->
             evaluate env first
