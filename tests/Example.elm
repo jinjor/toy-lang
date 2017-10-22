@@ -44,6 +44,7 @@ suite =
             , testEval "(\\a -> '') 1" [] "String"
             , testEval "(\\a -> a) 1" [] "Int"
             , testEval "(\\a -> f a)" [ "f" => "Int -> String" ] "(Int -> String)"
+            , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] "Int"
             , testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
             , testEval "if 0 '' ''" [ "if" => "Int -> a -> a -> a" ] "String"
             , testEval "if 0 0 ''" [ "if" => "Int -> a -> a -> a" ] "expected Int"

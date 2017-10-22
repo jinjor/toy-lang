@@ -167,10 +167,14 @@ apply : Env -> Type -> Type -> Result String ( Type, Env )
 apply env first second =
     case first of
         TypeArrow arg right ->
-            match env arg second
+            evaluate env second
                 |> Result.andThen
-                    (\env ->
-                        evaluate env right
+                    (\( second, env ) ->
+                        match env arg second
+                            |> Result.andThen
+                                (\env ->
+                                    evaluate env right
+                                )
                     )
 
         TypeValue name ->
@@ -180,19 +184,15 @@ apply env first second =
             evaluate env first
                 |> Result.andThen
                     (\( first, env ) ->
-                        evaluate env second
-                            |> Result.andThen
-                                (\( second, env ) ->
-                                    case first of
-                                        TypeArrow _ _ ->
-                                            apply env first second
+                        case first of
+                            TypeArrow _ _ ->
+                                apply env first second
 
-                                        TypeValue _ ->
-                                            apply env first second
+                            TypeValue _ ->
+                                apply env first second
 
-                                        _ ->
-                                            Ok ( TypeApply first second, env )
-                                )
+                            _ ->
+                                Ok ( TypeApply first second, env )
                     )
 
 
