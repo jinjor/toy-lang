@@ -337,11 +337,11 @@ string : Parser Expression
 string =
     inContext "string" <|
         succeed StringLiteral
-            |. symbol "'"
+            |. symbol "\""
             |= (source <|
-                    ignore zeroOrMore (\c -> c /= '\'')
+                    ignore zeroOrMore (\c -> c /= '"')
                )
-            |. symbol "'"
+            |. symbol "\""
 
 
 spaces : Parser ()
