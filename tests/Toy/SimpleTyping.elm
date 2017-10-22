@@ -156,14 +156,27 @@ evaluate env t =
                                 )
                     )
 
-        TypeApply (TypeArrow arg right) second ->
+        TypeApply first second ->
+            apply env first second
+
+        _ ->
+            Ok ( assignEnv env t, env )
+
+
+apply : Env -> Type -> Type -> Result String ( Type, Env )
+apply env first second =
+    case first of
+        TypeArrow arg right ->
             match env arg second
                 |> Result.andThen
                     (\env ->
                         evaluate env right
                     )
 
-        TypeApply first second ->
+        TypeValue name ->
+            Err ("value " ++ name ++ " cannot take arguments")
+
+        _ ->
             evaluate env first
                 |> Result.andThen
                     (\( first, env ) ->
@@ -171,23 +184,16 @@ evaluate env t =
                             |> Result.andThen
                                 (\( second, env ) ->
                                     case first of
-                                        TypeArrow arg res ->
-                                            match env arg second
-                                                |> Result.andThen
-                                                    (\env ->
-                                                        evaluate env res
-                                                    )
+                                        TypeArrow _ _ ->
+                                            apply env first second
 
-                                        TypeValue name ->
-                                            Err ("value " ++ name ++ " cannot take arguments")
+                                        TypeValue _ ->
+                                            apply env first second
 
                                         _ ->
                                             Ok ( TypeApply first second, env )
                                 )
                     )
-
-        _ ->
-            Ok ( assignEnv env t, env )
 
 
 match : Env -> Type -> Type -> Result String Env
