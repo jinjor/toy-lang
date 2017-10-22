@@ -1,4 +1,4 @@
-module Toy.Formatter exposing (formatInterface, formatError)
+module Toy.Formatter exposing (formatInterface, formatRange, formatError)
 
 import Toy.Parser exposing (..)
 import Toy.Checker exposing (Variable, Error, ErrorType(..))

@@ -5,6 +5,8 @@ import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Toy.SimpleTyping as SimpleTyping exposing (..)
 import Toy.SimpleParser as SimpleParser
+import Toy.Parser as ToyParser
+import Toy.Formatter as Formatter
 import Dict exposing (Dict)
 import Parser
 
@@ -134,7 +136,7 @@ testFromExp s =
                         |> always Expect.pass
 
                 Err e ->
-                    Expect.fail (SimpleParser.formatError e)
+                    Expect.fail (ToyParser.formatError e)
         )
 
 
@@ -203,7 +205,7 @@ testEval s envSource_ expected =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log ("[err]     " ++ input) e
+                                            Debug.log ("[err]     " ++ input) (e ++ " at " ++ Formatter.formatRange range)
                                     in
                                         if expected == "" then
                                             Expect.pass
@@ -213,7 +215,7 @@ testEval s envSource_ expected =
                                                 |> Expect.true (e ++ " should contain " ++ expected)
 
                     Err e ->
-                        Expect.fail (SimpleParser.formatError e)
+                        Expect.fail (ToyParser.formatError e)
             )
 
 

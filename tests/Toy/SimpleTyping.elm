@@ -13,7 +13,7 @@ type Type
     = TypeVar Int
     | TypeValue String (List Type)
     | TypeArrow Type Type
-    | TypeApply Type Type
+    | TypeApply Range Type Type
 
 
 type Error
@@ -37,7 +37,7 @@ formatType t =
         TypeArrow t1 t2 ->
             "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
 
-        TypeApply t1 t2 ->
+        TypeApply _ t1 t2 ->
             "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
@@ -111,7 +111,7 @@ fromExp n typeVars exp =
                 ( second, n2, dep2 ) =
                     fromExp n1 rightTypeVars b
             in
-                ( TypeApply first second, n2, Dict.union dep dep2 )
+                ( TypeApply mockRange first second, n2, Dict.union dep dep2 )
 
         Let name a b ->
             fromExp n typeVars (Call (Lambda name b) a)
@@ -119,14 +119,14 @@ fromExp n typeVars exp =
 
 debugEval : Env -> Type -> Type
 debugEval env t =
-    let
-        _ =
-            Debug.log "eval" <|
-                formatDict toString formatType env
-                    ++ " "
-                    ++ formatType t
-    in
-        t
+    -- let
+    --     _ =
+    --         Debug.log "eval" <|
+    --             formatDict toString formatType env
+    --                 ++ " "
+    --                 ++ formatType t
+    -- in
+    t
 
 
 assignEnv : Env -> Type -> Type
@@ -135,8 +135,8 @@ assignEnv env t =
         TypeArrow arg right ->
             TypeArrow (assignEnv env arg) (assignEnv env right)
 
-        TypeApply first second ->
-            TypeApply (assignEnv env first) (assignEnv env second)
+        TypeApply range first second ->
+            TypeApply range (assignEnv env first) (assignEnv env second)
 
         TypeVar id ->
             lookup env t
@@ -173,22 +173,22 @@ evaluate env t =
                                 )
                     )
 
-        TypeApply first second ->
-            apply env first second
+        TypeApply range first second ->
+            apply env range first second
 
         _ ->
             Ok ( assignEnv env t, env )
 
 
-apply : Env -> Type -> Type -> Result Error ( Type, Env )
-apply env first second =
+apply : Env -> Range -> Type -> Type -> Result Error ( Type, Env )
+apply env range first second =
     case first of
         TypeArrow arg right ->
             evaluate env second
                 |> Result.andThen
                     (\( second, env ) ->
                         match env arg second
-                            |> Result.mapError (\s -> Error mockRange s)
+                            |> Result.mapError (\s -> Error range s)
                             |> Result.andThen
                                 (\env ->
                                     evaluate env right
@@ -204,13 +204,13 @@ apply env first second =
                     (\( first, env ) ->
                         case first of
                             TypeArrow _ _ ->
-                                apply env first second
+                                apply env range first second
 
                             TypeValue _ _ ->
-                                apply env first second
+                                apply env range first second
 
                             _ ->
-                                Ok ( TypeApply first second, env )
+                                Ok ( TypeApply range first second, env )
                     )
 
 
@@ -242,7 +242,7 @@ match env first second =
         ( TypeArrow a1 a2, _ ) ->
             Err "too few arguments"
 
-        ( TypeApply _ _, _ ) ->
+        ( TypeApply _ _ _, _ ) ->
             Debug.crash "maybe a bug"
 
 
