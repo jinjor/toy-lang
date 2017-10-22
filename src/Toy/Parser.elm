@@ -51,6 +51,7 @@ type Expression
     | Ref Identifier
     | Call (Pos Expression) (Pos Expression)
     | Lambda Patterns (Pos Expression)
+    | Let Identifier Expression Expression
 
 
 type Patterns
@@ -273,6 +274,53 @@ ref =
     inContext "ref" <|
         succeed Ref
             |= identifier
+
+
+doReturn : Parser Expression
+doReturn =
+    inContext "do return" <|
+        succeed makeLet
+            |. keyword "do"
+            |. spaces
+            |= lazy (\_ -> onelineStatementsUntilIn)
+            |. spaces
+            |= lazy (\_ -> map .content expression)
+
+
+makeLet : List ( Identifier, Expression ) -> Expression -> Expression
+makeLet assignments exp =
+    case assignments of
+        [] ->
+            exp
+
+        ( left, right ) :: xs ->
+            Let left right (makeLet xs exp)
+
+
+onelineStatementsUntilIn : Parser (List ( Identifier, Expression ))
+onelineStatementsUntilIn =
+    inContext "oneline statements for debug" <|
+        oneOf
+            [ succeed []
+                |. keyword "return"
+            , succeed (::)
+                |= lazy (\_ -> assignment_)
+                |. spaces
+                |. symbol ";"
+                |. spaces
+                |= lazy (\_ -> onelineStatementsUntilIn)
+            ]
+
+
+assignment_ : Parser ( Identifier, Expression )
+assignment_ =
+    inContext "assignment for debug" <|
+        succeed (,)
+            |= identifier
+            |. spaces
+            |. symbol "="
+            |. spaces
+            |= lazy (\_ -> map .content expression)
 
 
 number : Parser Expression

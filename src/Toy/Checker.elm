@@ -146,6 +146,9 @@ lookupTypeForExpression vars exp =
         Ref id ->
             lookupTypeForRef vars id exp.range
 
+        Let _ _ _ ->
+            Debug.crash "not implemented yet"
+
 
 patternsToNames : Patterns -> List String
 patternsToNames (Patterns pattern tail) =
