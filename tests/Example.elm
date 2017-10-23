@@ -48,16 +48,16 @@ suite =
             , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] "Int"
             , testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
             , testEval "if 0 \"\" \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 1 0 \"\"" [ "if" => "Int -> a -> a -> a" ] "expected Int"
+            , testEval "if 1 0 \"\"" [ "if" => "Int -> a -> a -> a" ] "Mismatch"
             , testEval "if 2 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
-            , testEval "if 3 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected Int"
-            , testEval "if 4 \"\" a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "expected String"
+            , testEval "if 3 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
+            , testEval "if 4 \"\" a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
             , testEval "if 5 \"\" a" [ "if" => "Int -> a -> a -> a" ] "String"
             , testEval "if 6 a \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "a 1" [ "a" => "Int" ] "argument"
+            , testEval "a 1" [ "a" => "Int" ] "Argument"
             , testEval "a 1" [ "a" => "a" ] ""
             , testEval "a 1" [ "a" => "Int -> String" ] "String"
-            , testEval "a 1" [ "a" => "String -> Int" ] "expected String"
+            , testEval "a 1" [ "a" => "String -> Int" ] "Mismatch"
             , testEval "a 1" [ "a" => "a -> a" ] "Int"
             , testEval "do a = (\\a -> a); return f (a 1) (a \"\")" [] ""
             , testEval "(\\a -> a 1) (\\a -> a)" [] "Int"
@@ -76,7 +76,7 @@ suite =
             , testEval "map 1"
                 [ "map" => "(a -> b) -> a -> b"
                 ]
-                "few"
+                "Few"
             , testEval "map a"
                 [ "map" => "(a -> b) -> a -> b"
                 , "a" => "Int -> String -> Bool"
@@ -198,20 +198,20 @@ testEval s envSource_ expected =
                                         else
                                             Expect.equal expected (formatType t)
 
-                                Err (Error range e) ->
+                                Err ( range, e ) ->
                                     let
                                         _ =
                                             Debug.log "" ""
 
                                         _ =
-                                            Debug.log ("[err]     " ++ input) (e ++ " at " ++ Formatter.formatRange range)
+                                            Debug.log ("[err]     " ++ input) (toString e ++ " at " ++ Formatter.formatRange range)
                                     in
                                         if expected == "" then
                                             Expect.pass
                                         else
-                                            e
+                                            toString e
                                                 |> String.contains expected
-                                                |> Expect.true (e ++ " should contain " ++ expected)
+                                                |> Expect.true (toString e ++ " should contain " ++ expected)
 
                     Err e ->
                         Expect.fail (ToyParser.formatError e)

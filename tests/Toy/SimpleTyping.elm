@@ -16,8 +16,19 @@ type Type
     | TypeApply Range Type Type
 
 
-type Error
-    = Error Range String
+type alias Error =
+    ( Range, ErrorType )
+
+
+type ErrorType
+    = VariableNotDefined String
+    | TypeNotDefined String
+    | TypeMismatch Type Type
+    | TooFewArguments
+    | TooManyArguments
+    | TooFewTypeArguments
+    | TooManyTypeArguments
+    | TypeSignatureMismatch Type Type
 
 
 formatType : Type -> String
@@ -186,7 +197,7 @@ apply env range first second =
                 |> Result.andThen
                     (\( second, env ) ->
                         match env arg second
-                            |> Result.mapError (\s -> Error range s)
+                            |> Result.mapError ((,) range)
                             |> Result.andThen
                                 (\env ->
                                     evaluate env right
@@ -194,7 +205,7 @@ apply env range first second =
                     )
 
         TypeValue name _ ->
-            Err (Error mockRange <| "value " ++ name ++ " cannot take arguments")
+            Err ( mockRange, TooManyArguments )
 
         _ ->
             evaluate env first
@@ -212,20 +223,20 @@ apply env range first second =
                     )
 
 
-match : Env -> Type -> Type -> Result String Env
+match : Env -> Type -> Type -> Result ErrorType Env
 match env first second =
     case ( first, second ) of
         ( TypeValue c1 args1, TypeValue c2 args2 ) ->
             if c1 == c2 then
                 matchTypeArgs env args1 args2
             else
-                Err ("type mismatch: expected " ++ formatType first ++ " but got " ++ formatType second)
+                Err (TypeMismatch first second)
 
         ( TypeValue a _, TypeVar id ) ->
             Ok (Dict.insert id first env)
 
         ( TypeValue a _, _ ) ->
-            Err ("type mismatch: expected " ++ formatType first ++ " but got " ++ formatType second)
+            Err (TypeMismatch first second)
 
         ( TypeVar id, _ ) ->
             Ok (Dict.insert id second env)
@@ -238,13 +249,13 @@ match env first second =
                     )
 
         ( TypeArrow a1 a2, _ ) ->
-            Err "too few arguments"
+            Err TooFewArguments
 
         ( TypeApply _ _ _, _ ) ->
             Debug.crash "maybe a bug"
 
 
-matchTypeArgs : Env -> List Type -> List Type -> Result String Env
+matchTypeArgs : Env -> List Type -> List Type -> Result ErrorType Env
 matchTypeArgs env first second =
     case ( first, second ) of
         ( [], [] ) ->
@@ -258,10 +269,10 @@ matchTypeArgs env first second =
                     )
 
         ( [], _ ) ->
-            Err "too many type arguments"
+            Err TooManyTypeArguments
 
         ( _, [] ) ->
-            Err "too few type arguments"
+            Err TooFewTypeArguments
 
 
 formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
