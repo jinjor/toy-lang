@@ -211,22 +211,6 @@ identifier =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-
--- expression : Parser (Pos Expression)
--- expression =
---     inContext "expression" <|
---         positioned <|
---             oneOf
---                 [ number
---                 , string
---                 , lambda
---                 , succeed makeCall
---                     |= positioned ref
---                     |. spaces
---                     |= lazy (\_ -> functionTail)
---                 ]
-
-
 expression : Parser (Pos Expression)
 expression =
     inContext "expression" <|
@@ -401,12 +385,17 @@ spaces1 =
 positioned : Parser a -> Parser (Pos a)
 positioned parser =
     succeed
-        (\( row1, col1 ) a ( row2, col2 ) ->
-            Pos (Range (Position row1 col1) (Position row2 col2)) a
+        (\start a end ->
+            Pos (Range start end) a
         )
-        |= getPosition
+        |= getPos
         |= parser
-        |= getPosition
+        |= getPos
+
+
+getPos : Parser Position
+getPos =
+    map (\( row, col ) -> Position row col) getPosition
 
 
 formatError : Parser.Error -> String

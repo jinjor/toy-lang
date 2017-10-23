@@ -129,7 +129,7 @@ testFromExp s =
         (\_ ->
             case Parser.run ToyParser.expression s of
                 Ok exp ->
-                    exp.content
+                    exp
                         |> SimpleTyping.fromOriginalExp 0 Dict.empty
                         |> logParseResult s
                         |> always Expect.pass
@@ -162,7 +162,7 @@ testEval s envSource_ expected =
                     Ok ( exp, env_ ) ->
                         let
                             ( t, n, dep ) =
-                                exp.content
+                                exp
                                     |> SimpleTyping.fromOriginalExp 0 Dict.empty
                                     |> logParseResult s
 

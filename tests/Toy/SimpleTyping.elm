@@ -1,6 +1,7 @@
 module Toy.SimpleTyping exposing (..)
 
 import Toy.Parser as ToyParser exposing (..)
+import Toy.Formatter as Formatter
 import Dict exposing (Dict)
 
 
@@ -31,7 +32,7 @@ formatType t =
         TypeArrow t1 t2 ->
             "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
 
-        TypeApply _ t1 t2 ->
+        TypeApply range t1 t2 ->
             "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
@@ -72,9 +73,9 @@ fromTypeExp n typeVars t =
                     )
 
 
-fromOriginalExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
+fromOriginalExp : Int -> Dict String Type -> Pos Expression -> ( Type, Int, Dict String Int )
 fromOriginalExp n typeVars exp =
-    case exp of
+    case exp.content of
         NumberLiteral _ ->
             ( TypeValue "Int" [], n, Dict.empty )
 
@@ -90,28 +91,28 @@ fromOriginalExp n typeVars exp =
         Lambda (Patterns a _) exp ->
             let
                 ( right, n1, dep ) =
-                    fromOriginalExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp.content
+                    fromOriginalExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
             in
                 ( TypeArrow (TypeVar n) right, n1, dep )
 
         Call a b ->
             let
                 ( first, n1, dep ) =
-                    fromOriginalExp n typeVars a.content
+                    fromOriginalExp n typeVars a
 
                 rightTypeVars =
                     Dict.union (Dict.map (\_ id -> TypeVar id) dep) typeVars
 
                 ( second, n2, dep2 ) =
-                    fromOriginalExp n1 rightTypeVars b.content
+                    fromOriginalExp n1 rightTypeVars b
             in
-                ( TypeApply a.range first second, n2, Dict.union dep dep2 )
+                ( TypeApply exp.range first second, n2, Dict.union dep dep2 )
 
         Let name a b ->
             fromOriginalExp
                 n
                 typeVars
-                (Call (Pos mockRange (Lambda (Patterns name Nothing) (Pos mockRange b))) (Pos mockRange a))
+                (Pos mockRange (Call (Pos mockRange (Lambda (Patterns name Nothing) (Pos mockRange b))) (Pos mockRange a)))
 
 
 debugEval : Env -> Type -> Type
