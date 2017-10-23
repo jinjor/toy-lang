@@ -39,6 +39,7 @@ type alias Identifier =
 type TypeExp
     = ArrowType TypeExp TypeExp
     | TypeValue TypeConstructor (List TypeExp)
+    | TypeVar String
 
 
 type alias TypeConstructor =
@@ -60,6 +61,11 @@ type Patterns
 
 type alias Pattern =
     String
+
+
+mockRange : Range
+mockRange =
+    Range (Position 0 0) (Position 0 0)
 
 
 module_ : Parser Module
@@ -146,6 +152,7 @@ singleTypeExp =
                 |. spaces
                 |. symbol ")"
             , lazy (\_ -> typeValue)
+            , typeVariable
             ]
 
 
@@ -178,6 +185,15 @@ typeConstructor =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
+typeVariable : Parser TypeExp
+typeVariable =
+    inContext "type variable" <|
+        map TypeVar <|
+            source <|
+                ignore (Exactly 1) Char.isLower
+                    |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+
+
 assignment : Parser (Pos Identifier -> Statement)
 assignment =
     inContext "assignment" <|
@@ -195,26 +211,36 @@ identifier =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
+
+-- expression : Parser (Pos Expression)
+-- expression =
+--     inContext "expression" <|
+--         positioned <|
+--             oneOf
+--                 [ number
+--                 , string
+--                 , lambda
+--                 , succeed makeCall
+--                     |= positioned ref
+--                     |. spaces
+--                     |= lazy (\_ -> functionTail)
+--                 ]
+
+
 expression : Parser (Pos Expression)
 expression =
     inContext "expression" <|
-        positioned <|
-            oneOf
-                [ number
-                , string
-                , lambda
-                , succeed makeCall
-                    |= positioned ref
-                    |. spaces
-                    |= lazy (\_ -> functionTail)
-                ]
+        succeed makeCall
+            |= lazy (\_ -> singleExpression)
+            |. spaces
+            |= lazy (\_ -> functionTail)
 
 
-makeCall : Pos Expression -> List (Pos Expression) -> Expression
+makeCall : Pos Expression -> List (Pos Expression) -> Pos Expression
 makeCall head tail =
     case tail of
         [] ->
-            head.content
+            head
 
         x :: xs ->
             let
@@ -224,12 +250,30 @@ makeCall head tail =
                 makeCall (Pos range (Call head x)) xs
 
 
+singleExpression : Parser (Pos Expression)
+singleExpression =
+    inContext "single expression" <|
+        oneOf
+            [ positioned number
+            , positioned string
+            , lazy (\_ -> positioned lambda)
+            , lazy (\_ -> positioned doReturn)
+            , positioned ref
+            , succeed identity
+                |. symbol "("
+                |. spaces
+                |= lazy (\_ -> expression)
+                |. spaces
+                |. symbol ")"
+            ]
+
+
 functionTail : Parser (List (Pos Expression))
 functionTail =
     inContext "function tail" <|
         oneOf
             [ succeed (::)
-                |= lazy (\_ -> expression)
+                |= lazy (\_ -> singleExpression)
                 |. spaces
                 |= lazy (\_ -> functionTail)
             , succeed []

@@ -1,7 +1,6 @@
 module Toy.SimpleTyping exposing (..)
 
-import Toy.Parser as P exposing (Range, Position)
-import Toy.SimpleParser as SimpleParser exposing (..)
+import Toy.Parser as ToyParser exposing (..)
 import Dict exposing (Dict)
 
 
@@ -18,11 +17,6 @@ type Type
 
 type Error
     = Error Range String
-
-
-mockRange : Range
-mockRange =
-    Range (Position 0 0) (Position 0 0)
 
 
 formatType : Type -> String
@@ -44,7 +38,7 @@ formatType t =
 fromTypeExp : Int -> Dict String Type -> TypeExp -> ( Type, Int, Dict String Type )
 fromTypeExp n typeVars t =
     case t of
-        SimpleParser.ArrowType t1 t2 ->
+        ToyParser.ArrowType t1 t2 ->
             fromTypeExp n typeVars t1
                 |> (\( t1, n, typeVars ) ->
                         fromTypeExp n typeVars t2
@@ -53,7 +47,7 @@ fromTypeExp n typeVars t =
                                )
                    )
 
-        SimpleParser.TypeValue constructor args ->
+        ToyParser.TypeValue constructor args ->
             args
                 |> List.foldl
                     (\arg ( argTypes, n, typeVars ) ->
@@ -67,7 +61,7 @@ fromTypeExp n typeVars t =
                         ( TypeValue constructor argTypes, n, typeVars )
                    )
 
-        SimpleParser.TypeVar name ->
+        ToyParser.TypeVar name ->
             typeVars
                 |> Dict.get name
                 |> Maybe.map (\t -> ( t, n, typeVars ))
@@ -78,10 +72,10 @@ fromTypeExp n typeVars t =
                     )
 
 
-fromExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
-fromExp n typeVars exp =
+fromOriginalExp : Int -> Dict String Type -> Expression -> ( Type, Int, Dict String Int )
+fromOriginalExp n typeVars exp =
     case exp of
-        IntLiteral _ ->
+        NumberLiteral _ ->
             ( TypeValue "Int" [], n, Dict.empty )
 
         StringLiteral _ ->
@@ -93,53 +87,14 @@ fromExp n typeVars exp =
                 |> Maybe.map (\t -> ( t, n, Dict.empty ))
                 |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a n )
 
-        Lambda a exp ->
-            let
-                ( right, n1, dep ) =
-                    fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
-            in
-                ( TypeArrow (TypeVar n) right, n1, dep )
-
-        Call a b ->
-            let
-                ( first, n1, dep ) =
-                    fromExp n typeVars a
-
-                rightTypeVars =
-                    Dict.union (Dict.map (\_ id -> TypeVar id) dep) typeVars
-
-                ( second, n2, dep2 ) =
-                    fromExp n1 rightTypeVars b
-            in
-                ( TypeApply mockRange first second, n2, Dict.union dep dep2 )
-
-        Let name a b ->
-            fromExp n typeVars (Call (Lambda name b) a)
-
-
-fromOriginalExp : Int -> Dict String Type -> P.Expression -> ( Type, Int, Dict String Int )
-fromOriginalExp n typeVars exp =
-    case exp of
-        P.NumberLiteral _ ->
-            ( TypeValue "Int" [], n, Dict.empty )
-
-        P.StringLiteral _ ->
-            ( TypeValue "String" [], n, Dict.empty )
-
-        P.Ref a ->
-            typeVars
-                |> Dict.get a
-                |> Maybe.map (\t -> ( t, n, Dict.empty ))
-                |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a n )
-
-        P.Lambda (P.Patterns a _) exp ->
+        Lambda (Patterns a _) exp ->
             let
                 ( right, n1, dep ) =
                     fromOriginalExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp.content
             in
                 ( TypeArrow (TypeVar n) right, n1, dep )
 
-        P.Call a b ->
+        Call a b ->
             let
                 ( first, n1, dep ) =
                     fromOriginalExp n typeVars a.content
@@ -152,11 +107,11 @@ fromOriginalExp n typeVars exp =
             in
                 ( TypeApply a.range first second, n2, Dict.union dep dep2 )
 
-        P.Let name a b ->
+        Let name a b ->
             fromOriginalExp
                 n
                 typeVars
-                (P.Call (P.Pos mockRange (P.Lambda (P.Patterns name Nothing) (P.Pos mockRange b))) (P.Pos mockRange a))
+                (Call (Pos mockRange (Lambda (Patterns name Nothing) (Pos mockRange b))) (Pos mockRange a))
 
 
 debugEval : Env -> Type -> Type

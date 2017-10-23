@@ -174,6 +174,9 @@ applyType t1 t2 =
         TypeValue _ _ ->
             Err TooManyArguments
 
+        TypeVar _ ->
+            Debug.crash "not implemented"
+
 
 lookupTypeForRef : Variables -> Identifier -> Range -> Result Error ( TypeExp, Variables )
 lookupTypeForRef (Variables dict tail) id range =

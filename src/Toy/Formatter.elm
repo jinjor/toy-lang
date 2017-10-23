@@ -40,6 +40,9 @@ formatTypeHelp isArg type_ =
                 |> String.join " "
                 |> parenIf (isArg && args /= [])
 
+        TypeVar name ->
+            name
+
 
 parenIf : Bool -> String -> String
 parenIf condition s =

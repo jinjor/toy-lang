@@ -4,7 +4,6 @@ import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Toy.SimpleTyping as SimpleTyping exposing (..)
-import Toy.SimpleParser as SimpleParser
 import Toy.Parser as ToyParser
 import Toy.Formatter as Formatter
 import Dict exposing (Dict)
@@ -128,10 +127,10 @@ testFromExp : String -> Test
 testFromExp s =
     test s
         (\_ ->
-            case Parser.run SimpleParser.expression s of
+            case Parser.run ToyParser.expression s of
                 Ok exp ->
-                    exp
-                        |> SimpleTyping.fromExp 0 Dict.empty
+                    exp.content
+                        |> SimpleTyping.fromOriginalExp 0 Dict.empty
                         |> logParseResult s
                         |> always Expect.pass
 
@@ -150,7 +149,7 @@ testEval s envSource_ expected =
             (s ++ " with " ++ formatDict identity identity envSource)
 
         parseResult =
-            Parser.run SimpleParser.expression s
+            Parser.run ToyParser.expression s
                 |> Result.andThen
                     (\exp ->
                         parseEnv envSource
@@ -163,8 +162,8 @@ testEval s envSource_ expected =
                     Ok ( exp, env_ ) ->
                         let
                             ( t, n, dep ) =
-                                exp
-                                    |> SimpleTyping.fromExp 0 Dict.empty
+                                exp.content
+                                    |> SimpleTyping.fromOriginalExp 0 Dict.empty
                                     |> logParseResult s
 
                             envTypes =
@@ -235,10 +234,10 @@ resolveDependencies envTypes dep =
         |> Dict.fromList
 
 
-parseEnv : Dict String String -> Result Parser.Error (Dict String SimpleParser.TypeExp)
+parseEnv : Dict String String -> Result Parser.Error (Dict String ToyParser.TypeExp)
 parseEnv envSource =
     envSource
-        |> Dict.map (\_ s -> Parser.run SimpleParser.typeExp s)
+        |> Dict.map (\_ s -> Parser.run ToyParser.typeExp s)
         |> Dict.foldl
             (\name result results ->
                 results
