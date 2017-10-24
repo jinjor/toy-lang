@@ -123,7 +123,7 @@ fromOriginalExp n typeVars exp =
             fromOriginalExp
                 n
                 typeVars
-                (Pos mockRange (Call (Pos mockRange (Lambda (Patterns name Nothing) (Pos mockRange b))) (Pos mockRange a)))
+                (Pos mockRange (Call (Pos mockRange (Lambda (Patterns name Nothing) b)) a))
 
 
 debugEval : Env -> Type -> Type

@@ -52,7 +52,7 @@ type Expression
     | Ref Identifier
     | Call (Pos Expression) (Pos Expression)
     | Lambda Patterns (Pos Expression)
-    | Let Identifier Expression Expression
+    | Let Identifier (Pos Expression) (Pos Expression)
 
 
 type Patterns
@@ -241,7 +241,7 @@ singleExpression =
             [ positioned number
             , positioned string
             , lazy (\_ -> positioned lambda)
-            , lazy (\_ -> positioned doReturn)
+            , lazy (\_ -> doReturn)
             , positioned ref
             , succeed identity
                 |. symbol "("
@@ -304,7 +304,7 @@ ref =
             |= identifier
 
 
-doReturn : Parser Expression
+doReturn : Parser (Pos Expression)
 doReturn =
     inContext "do return" <|
         succeed makeLet
@@ -312,20 +312,20 @@ doReturn =
             |. spaces
             |= lazy (\_ -> onelineStatementsUntilIn)
             |. spaces
-            |= lazy (\_ -> map .content expression)
+            |= lazy (\_ -> expression)
 
 
-makeLet : List ( Identifier, Expression ) -> Expression -> Expression
+makeLet : List ( Identifier, Pos Expression ) -> Pos Expression -> Pos Expression
 makeLet assignments exp =
     case assignments of
         [] ->
             exp
 
         ( left, right ) :: xs ->
-            Let left right (makeLet xs exp)
+            Pos mockRange (Let left right (makeLet xs exp))
 
 
-onelineStatementsUntilIn : Parser (List ( Identifier, Expression ))
+onelineStatementsUntilIn : Parser (List ( Identifier, Pos Expression ))
 onelineStatementsUntilIn =
     inContext "oneline statements for debug" <|
         oneOf
@@ -340,7 +340,7 @@ onelineStatementsUntilIn =
             ]
 
 
-assignment_ : Parser ( Identifier, Expression )
+assignment_ : Parser ( Identifier, Pos Expression )
 assignment_ =
     inContext "assignment for debug" <|
         succeed (,)
@@ -348,7 +348,7 @@ assignment_ =
             |. spaces
             |. symbol "="
             |. spaces
-            |= lazy (\_ -> map .content expression)
+            |= lazy (\_ -> expression)
 
 
 number : Parser Expression
