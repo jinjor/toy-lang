@@ -84,8 +84,8 @@ fromTypeExp n typeVars t =
                     )
 
 
-fromOriginalExp : Int -> Dict String Type -> Pos Expression -> ( Type, Int, Dict String Int )
-fromOriginalExp n typeVars exp =
+fromExp : Int -> Dict String Type -> Pos Expression -> ( Type, Int, Dict String Int )
+fromExp n typeVars exp =
     case exp.content of
         NumberLiteral _ ->
             ( TypeValue "Int" [], n, Dict.empty )
@@ -102,25 +102,25 @@ fromOriginalExp n typeVars exp =
         Lambda (Patterns a _) exp ->
             let
                 ( right, n1, dep ) =
-                    fromOriginalExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
+                    fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
             in
                 ( TypeArrow (TypeVar n) right, n1, dep )
 
         Call a b ->
             let
                 ( first, n1, dep ) =
-                    fromOriginalExp n typeVars a
+                    fromExp n typeVars a
 
                 rightTypeVars =
                     Dict.union (Dict.map (\_ id -> TypeVar id) dep) typeVars
 
                 ( second, n2, dep2 ) =
-                    fromOriginalExp n1 rightTypeVars b
+                    fromExp n1 rightTypeVars b
             in
                 ( TypeApply exp.range first second, n2, Dict.union dep dep2 )
 
         Let name a b ->
-            fromOriginalExp
+            fromExp
                 n
                 typeVars
                 (Pos mockRange (Call (Pos mockRange (Lambda (Patterns name Nothing) b)) a))
