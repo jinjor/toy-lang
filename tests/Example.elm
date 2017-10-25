@@ -173,8 +173,10 @@ testEval s envSource_ expected =
                                 env_
                                     |> Dict.map
                                         (\id tExp ->
-                                            SimpleTyping.fromTypeExp n Dict.empty tExp
-                                                |> (\( t, _, _ ) -> t)
+                                            SimpleTyping.fromTypeExp
+                                                (SimpleTyping.initFromTypeExpState n)
+                                                tExp
+                                                |> Tuple.first
                                         )
 
                             env =

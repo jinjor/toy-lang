@@ -47,51 +47,77 @@ formatType t =
             "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
-fromTypeExp : Int -> Dict String Type -> TypeExp -> ( Type, Int, Dict String Type )
-fromTypeExp n typeVars t =
+type alias FromTypeExpState =
+    { n : Int
+    , typeVars : Dict String Type
+    }
+
+
+initFromTypeExpState : Int -> FromTypeExpState
+initFromTypeExpState n =
+    FromTypeExpState n Dict.empty
+
+
+fromTypeExp : FromTypeExpState -> TypeExp -> ( Type, FromTypeExpState )
+fromTypeExp state t =
     case t of
         ToyParser.ArrowType t1 t2 ->
-            fromTypeExp n typeVars t1
-                |> (\( t1, n, typeVars ) ->
-                        fromTypeExp n typeVars t2
-                            |> (\( t2, n, typeVars ) ->
-                                    ( TypeArrow t1 t2, n, typeVars )
-                               )
+            fromTypeExp state t1
+                |> (\( t1, state ) ->
+                        fromTypeExp state t2
+                            |> Tuple.mapFirst
+                                (\t2 ->
+                                    TypeArrow t1 t2
+                                )
                    )
 
         ToyParser.TypeValue constructor args ->
             args
                 |> List.foldl
-                    (\arg ( argTypes, n, typeVars ) ->
-                        fromTypeExp n typeVars arg
-                            |> (\( argType, n, typeVars ) ->
-                                    ( argTypes ++ [ argType ], n, typeVars )
-                               )
+                    (\arg ( argTypes, state ) ->
+                        fromTypeExp state arg
+                            |> Tuple.mapFirst
+                                (\argType ->
+                                    argTypes ++ [ argType ]
+                                )
                     )
-                    ( [], n, typeVars )
-                |> (\( argTypes, n, typeVars ) ->
-                        ( TypeValue constructor argTypes, n, typeVars )
-                   )
+                    ( [], state )
+                |> Tuple.mapFirst
+                    (\argTypes ->
+                        TypeValue constructor argTypes
+                    )
 
         ToyParser.TypeVar name ->
-            typeVars
+            state.typeVars
                 |> Dict.get name
-                |> Maybe.map (\t -> ( t, n, typeVars ))
+                |> Maybe.map (\t -> ( t, state ))
                 |> Maybe.withDefault
-                    ( TypeVar n
-                    , n + 1
-                    , Dict.insert name (TypeVar n) typeVars
+                    ( TypeVar state.n
+                    , { state
+                        | n = state.n + 1
+                        , typeVars = Dict.insert name (TypeVar state.n) state.typeVars
+                      }
                     )
+
+
+int : Type
+int =
+    TypeValue "Int" []
+
+
+string : Type
+string =
+    TypeValue "String" []
 
 
 fromExp : Int -> Dict String Type -> Pos Expression -> ( Type, Int, Dict String Int )
 fromExp n typeVars exp =
     case exp.content of
         NumberLiteral _ ->
-            ( TypeValue "Int" [], n, Dict.empty )
+            ( int, n, Dict.empty )
 
         StringLiteral _ ->
-            ( TypeValue "String" [], n, Dict.empty )
+            ( string, n, Dict.empty )
 
         Ref a ->
             typeVars
