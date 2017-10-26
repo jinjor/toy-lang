@@ -60,6 +60,9 @@ translateExpression exp =
         P.Lambda patterns exp ->
             JsFunction (C.patternsToNames patterns) (translateExpression exp)
 
+        P.Let _ _ _ ->
+            Debug.crash "not implemented yet"
+
 
 fullId : String -> String
 fullId id =
