@@ -58,6 +58,23 @@ initFromTypeExpState n =
     FromTypeExpState n Dict.empty
 
 
+fromTypeExpDict : Int -> Dict String (Pos TypeExp) -> Dict String Type
+fromTypeExpDict n dict =
+    -- TODO error if id is duplicated
+    dict
+        |> Dict.toList
+        |> List.foldl
+            (\( id, tExp ) ( n, list ) ->
+                fromTypeExp
+                    (initFromTypeExpState n)
+                    tExp.content
+                    |> (\( t, state ) -> ( state.n, ( id, t ) :: list ))
+            )
+            ( n, [] )
+        |> Tuple.second
+        |> Dict.fromList
+
+
 fromTypeExp : FromTypeExpState -> TypeExp -> ( Type, FromTypeExpState )
 fromTypeExp state t =
     case t of

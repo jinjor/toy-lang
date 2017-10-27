@@ -1,5 +1,5 @@
 #!/bin/sh
 
-elm-test &&
 sh build.sh &&
+elm-test &&
 sh tests/compile.sh

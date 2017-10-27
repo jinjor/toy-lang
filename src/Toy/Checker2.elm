@@ -31,42 +31,37 @@ check module_ =
 
         envTypes =
             getTypeExpDict module_
-                |> Dict.map
-                    (\id tExp ->
-                        SimpleTyping.fromTypeExp
-                            (SimpleTyping.initFromTypeExpState n)
-                            tExp.content
-                            |> Tuple.first
-                    )
+                |> SimpleTyping.fromTypeExpDict n
 
-        resultDict =
+        result =
             checkAllTypes (Dict.toList expDict) envTypes
                 |> Debug.log "resultDict"
     in
-        ( [], [] )
+        case result of
+            Ok dict ->
+                ( [], [] )
+
+            Err e ->
+                ( [ e ], [] )
 
 
-checkAllTypes : List ( String, ( Type, Dict String Int ) ) -> Dict String Type -> Dict String Type
+checkAllTypes : List ( String, ( Type, Dict String Int ) ) -> Dict String Type -> Result Error (Dict String Type)
 checkAllTypes expList envTypes =
     case expList of
         [] ->
-            envTypes
+            Ok envTypes
 
         ( id, ( t, dep ) ) :: tail ->
             let
                 env =
                     resolveDependencies envTypes dep
             in
-                case evaluate env t of
-                    Ok ( t, env ) ->
-                        checkAllTypes tail (Dict.insert id t envTypes)
-
-                    Err ( range, e ) ->
-                        let
-                            _ =
-                                Debug.log "error" e
-                        in
-                            envTypes
+                evaluate env t
+                    |> Result.mapError TypeError
+                    |> Result.andThen
+                        (\( t, env ) ->
+                            checkAllTypes tail (Dict.insert id t envTypes)
+                        )
 
 
 resolveDependencies : Dict String Type -> Dict String Int -> Env
