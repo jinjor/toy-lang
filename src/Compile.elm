@@ -4,7 +4,6 @@ import Json.Decode as D
 import Json.Encode as E
 import Toy.Parser as ToyParser
 import Toy.Checker as ToyChecker
-import Toy.Checker2 as ToyChecker2
 import Toy.Formatter as ToyFormatter
 import Toy.Generator as ToyGenerator
 import Toy.Translator as ToyTranslator
@@ -63,7 +62,7 @@ init =
 type Msg
     = Parse String
     | Check ToyParser.Module
-    | Generate (List ToyChecker.Variable)
+    | Generate (List ToyChecker.Interface)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -87,9 +86,6 @@ update msg model =
             , let
                 ( errors, interfaces ) =
                     ToyChecker.check module_
-
-                _ =
-                    ToyChecker2.check module_
               in
                 Cmd.batch
                     [ if errors == [] then

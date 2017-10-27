@@ -3,28 +3,11 @@ module Toy.Parser exposing (..)
 import Char
 import Parser exposing (..)
 import Parser.LowLevel exposing (..)
+import Toy.Position exposing (..)
 
 
 type Module
     = Module (List (Pos Statement))
-
-
-type alias Position =
-    { row : Int
-    , col : Int
-    }
-
-
-type alias Range =
-    { start : Position
-    , end : Position
-    }
-
-
-type alias Pos a =
-    { range : Range
-    , content : a
-    }
 
 
 type Statement

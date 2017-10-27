@@ -1,9 +1,10 @@
-module Example exposing (..)
+module TypeTest exposing (..)
 
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
-import Toy.SimpleTyping as SimpleTyping exposing (..)
+import Toy.Type exposing (..)
+import Toy.Typing as Typing exposing (..)
 import Toy.Parser as ToyParser
 import Toy.Formatter as Formatter
 import Dict exposing (Dict)
@@ -12,7 +13,7 @@ import Parser
 
 suite : Test
 suite =
-    describe "SimpleTyping"
+    describe "Typing"
         [ describe "fromExp"
             [ testFromExp "1"
             , testFromExp "\"\""
@@ -133,7 +134,7 @@ testFromExp s =
             case Parser.run ToyParser.expression s of
                 Ok exp ->
                     exp
-                        |> SimpleTyping.fromExp 0 Dict.empty
+                        |> Typing.fromExp 0 Dict.empty
                         |> logParseResult s
                         |> always Expect.pass
 
@@ -166,15 +167,15 @@ testEval s envSource_ expected =
                         let
                             ( t, n, dep ) =
                                 exp
-                                    |> SimpleTyping.fromExp 0 Dict.empty
+                                    |> Typing.fromExp 0 Dict.empty
                                     |> logParseResult s
 
                             envTypes =
                                 env_
                                     |> Dict.map
                                         (\id tExp ->
-                                            SimpleTyping.fromTypeExp
-                                                (SimpleTyping.initFromTypeExpState n)
+                                            Typing.fromTypeExp
+                                                (Typing.initFromTypeExpState n)
                                                 tExp
                                                 |> Tuple.first
                                         )

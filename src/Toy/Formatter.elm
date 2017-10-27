@@ -1,12 +1,14 @@
 module Toy.Formatter exposing (formatInterface, formatRange, formatError)
 
+import Toy.Position exposing (..)
 import Toy.Parser exposing (..)
-import Toy.Checker exposing (Variable, Error, ErrorType(..))
+import Toy.Checker exposing (Interface)
+import Toy.Error exposing (..)
 
 
-formatInterface : Variable -> String
+formatInterface : Interface -> String
 formatInterface v =
-    formatInterfaceHelp v.id (Maybe.map Tuple.first v.type_)
+    formatInterfaceHelp v.id (Just v.type_)
 
 
 formatInterfaceHelp : Identifier -> Maybe TypeExp -> String
@@ -73,29 +75,37 @@ formatErrorType e =
         VariableNotDefined id ->
             id ++ " is not defined"
 
-        VariableDuplicated id ->
-            id ++ " is already defined"
-
         TypeNotDefined name ->
             "type " ++ name ++ "is not defined"
 
-        TypeDuplicated id ->
-            id ++ " is already typed"
-
         TypeMismatch expected actual ->
             "expected type "
-                ++ formatType expected
+                -- ++ formatType expected
+                ++
+                    toString expected
                 ++ " but got type "
-                ++ formatType actual
+                -- ++ formatType actual
+                ++
+                    toString actual
+
+        TooFewArguments ->
+            "too few arguments"
 
         TooManyArguments ->
             "too many arguments"
 
-        NoImplementation id ->
-            "no implementation found for " ++ id
+        TooFewTypeArguments ->
+            "too few type arguments"
+
+        TooManyTypeArguments ->
+            "too many type arguments"
 
         TypeSignatureMismatch expected actual ->
             "type is declared as "
-                ++ formatType expected
+                -- ++ formatType expected
+                ++
+                    toString expected
                 ++ " but implemantation is type "
-                ++ formatType actual
+                -- ++ formatType actual
+                ++
+                    toString actual

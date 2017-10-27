@@ -1,34 +1,14 @@
-module Toy.SimpleTyping exposing (..)
+module Toy.Typing exposing (..)
 
-import Toy.Parser as ToyParser exposing (..)
-import Toy.Formatter as Formatter
+import Toy.Parser as P
+import Toy.Position exposing (..)
+import Toy.Type exposing (..)
+import Toy.Error exposing (..)
 import Dict exposing (Dict)
 
 
 type alias Env =
     Dict Int Type
-
-
-type Type
-    = TypeVar Int
-    | TypeValue String (List Type)
-    | TypeArrow Type Type
-    | TypeApply Range Type Type
-
-
-type alias Error =
-    ( Range, ErrorType )
-
-
-type ErrorType
-    = VariableNotDefined String
-    | TypeNotDefined String
-    | TypeMismatch Type Type
-    | TooFewArguments
-    | TooManyArguments
-    | TooFewTypeArguments
-    | TooManyTypeArguments
-    | TypeSignatureMismatch Type Type
 
 
 formatType : Type -> String
@@ -58,7 +38,7 @@ initFromTypeExpState n =
     FromTypeExpState n Dict.empty
 
 
-fromTypeExpDict : Int -> Dict String (Pos TypeExp) -> Dict String Type
+fromTypeExpDict : Int -> Dict String (Pos P.TypeExp) -> Dict String Type
 fromTypeExpDict n dict =
     -- TODO error if id is duplicated
     dict
@@ -75,10 +55,10 @@ fromTypeExpDict n dict =
         |> Dict.fromList
 
 
-fromTypeExp : FromTypeExpState -> TypeExp -> ( Type, FromTypeExpState )
+fromTypeExp : FromTypeExpState -> P.TypeExp -> ( Type, FromTypeExpState )
 fromTypeExp state t =
     case t of
-        ToyParser.ArrowType t1 t2 ->
+        P.ArrowType t1 t2 ->
             fromTypeExp state t1
                 |> (\( t1, state ) ->
                         fromTypeExp state t2
@@ -88,7 +68,7 @@ fromTypeExp state t =
                                 )
                    )
 
-        ToyParser.TypeValue constructor args ->
+        P.TypeValue constructor args ->
             args
                 |> List.foldl
                     (\arg ( argTypes, state ) ->
@@ -104,7 +84,7 @@ fromTypeExp state t =
                         TypeValue constructor argTypes
                     )
 
-        ToyParser.TypeVar name ->
+        P.TypeVar name ->
             state.typeVars
                 |> Dict.get name
                 |> Maybe.map (\t -> ( t, state ))
@@ -127,29 +107,29 @@ string =
     TypeValue "String" []
 
 
-fromExp : Int -> Dict String Type -> Pos Expression -> ( Type, Int, Dict String Int )
+fromExp : Int -> Dict String Type -> Pos P.Expression -> ( Type, Int, Dict String Int )
 fromExp n typeVars exp =
     case exp.content of
-        NumberLiteral _ ->
+        P.NumberLiteral _ ->
             ( int, n, Dict.empty )
 
-        StringLiteral _ ->
+        P.StringLiteral _ ->
             ( string, n, Dict.empty )
 
-        Ref a ->
+        P.Ref a ->
             typeVars
                 |> Dict.get a
                 |> Maybe.map (\t -> ( t, n, Dict.empty ))
                 |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a n )
 
-        Lambda (Patterns a _) exp ->
+        P.Lambda (P.Patterns a _) exp ->
             let
                 ( right, n1, dep ) =
                     fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
             in
                 ( TypeArrow (TypeVar n) right, n1, dep )
 
-        Call a b ->
+        P.Call a b ->
             let
                 ( first, n1, dep ) =
                     fromExp n typeVars a
@@ -162,11 +142,11 @@ fromExp n typeVars exp =
             in
                 ( TypeApply exp.range first second, n2, Dict.union dep dep2 )
 
-        Let name a b ->
+        P.Let name a b ->
             fromExp
                 n
                 typeVars
-                (Pos mockRange (Call (Pos mockRange (Lambda (Patterns name Nothing) b)) a))
+                (Pos P.mockRange (P.Call (Pos P.mockRange (P.Lambda (P.Patterns name Nothing) b)) a))
 
 
 debugEval : Env -> Type -> Type
@@ -248,7 +228,7 @@ apply env range first second =
                     )
 
         TypeValue name _ ->
-            Err ( mockRange, TooManyArguments )
+            Err ( P.mockRange, TooManyArguments )
 
         _ ->
             evaluate env first
