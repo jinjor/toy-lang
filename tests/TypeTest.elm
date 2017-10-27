@@ -6,7 +6,7 @@ import Test exposing (..)
 import Toy.Type exposing (..)
 import Toy.Typing as Typing exposing (..)
 import Toy.Parser as ToyParser
-import Toy.Formatter as Formatter
+import Toy.Formatter as Formatter exposing (formatType)
 import Dict exposing (Dict)
 import Parser
 

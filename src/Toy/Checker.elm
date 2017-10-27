@@ -10,15 +10,24 @@ import Dict exposing (Dict)
 
 type alias Interface =
     { id : String
-    , type_ : TypeExp
+    , type_ : Type
     }
 
 
-check : Module -> ( List Error, List Interface )
+type alias Implementation =
+    { id : String
+    , exp : Pos Expression
+    }
+
+
+check : Module -> ( List Error, List Interface, List Implementation )
 check module_ =
     let
-        ( n, expDict ) =
+        expDict =
             getExpDict module_
+
+        ( n, envFromModule ) =
+            expDict
                 |> Dict.foldl
                     (\id exp ( n, dict ) ->
                         Typing.fromExp n Dict.empty exp
@@ -33,15 +42,22 @@ check module_ =
                 |> Typing.fromTypeExpDict n
 
         result =
-            checkAllTypes (Dict.toList expDict) envTypes
+            checkAllTypes (Dict.toList envFromModule) envTypes
                 |> Debug.log "resultDict"
     in
         case result of
             Ok dict ->
-                ( [], [] )
+                ( []
+                , dict
+                    |> Dict.toList
+                    |> List.map (\( id, t ) -> Interface id t)
+                , expDict
+                    |> Dict.toList
+                    |> List.map (\( id, exp ) -> Implementation id exp)
+                )
 
             Err e ->
-                ( [ e ], [] )
+                ( [ e ], [], [] )
 
 
 checkAllTypes : List ( String, ( Type, Dict String Int ) ) -> Dict String Type -> Result Error (Dict String Type)

@@ -26,27 +26,14 @@ type JsExpression
     | JsFunction (List String) JsExpression
 
 
-
--- translateModule : List C.Variable -> Module
--- translateModule interfaces =
---     interfaces
---         |> List.map (\v -> JsAssignment (fullId v.id) (translateExpressionWrap v.exp))
---         |> Module
-
-
-translateModule : List a -> Module
-translateModule interfaces =
-    Debug.crash "not implemented yet"
-
-
-translateExpressionWrap : Maybe (Pos P.Expression) -> JsExpression
-translateExpressionWrap maybeExp =
-    case maybeExp of
-        Nothing ->
-            Debug.crash "bug in checker"
-
-        Just exp ->
-            translateExpression exp
+translateModule : List C.Implementation -> Module
+translateModule impls =
+    impls
+        |> List.map
+            (\impl ->
+                JsAssignment (fullId impl.id) (translateExpression impl.exp)
+            )
+        |> Module
 
 
 translateExpression : Pos P.Expression -> JsExpression

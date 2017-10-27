@@ -62,7 +62,7 @@ init =
 type Msg
     = Parse String
     | Check ToyParser.Module
-    | Generate (List ToyChecker.Interface)
+    | Generate (List ToyChecker.Implementation)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -84,12 +84,12 @@ update msg model =
         Check module_ ->
             ( model
             , let
-                ( errors, interfaces ) =
+                ( errors, interfaces, implementations ) =
                     ToyChecker.check module_
               in
                 Cmd.batch
                     [ if errors == [] then
-                        (Task.succeed (Generate interfaces) |> Task.perform identity)
+                        (Task.succeed (Generate implementations) |> Task.perform identity)
                       else
                         Cmd.none
                     , checked
@@ -99,9 +99,9 @@ update msg model =
                     ]
             )
 
-        Generate interfaces ->
+        Generate implementations ->
             ( model
-            , interfaces
+            , implementations
                 |> ToyTranslator.translateModule
                 |> ToyGenerator.generateModule
                 |> generated

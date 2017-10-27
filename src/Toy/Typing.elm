@@ -11,22 +11,6 @@ type alias Env =
     Dict Int Type
 
 
-formatType : Type -> String
-formatType t =
-    case t of
-        TypeVar id ->
-            toString id
-
-        TypeValue s args ->
-            String.join " " (s :: List.map formatType args)
-
-        TypeArrow t1 t2 ->
-            "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
-
-        TypeApply range t1 t2 ->
-            "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
-
-
 type alias FromTypeExpState =
     { n : Int
     , typeVars : Dict String Type

@@ -1,7 +1,8 @@
-module Toy.Formatter exposing (formatInterface, formatRange, formatError)
+module Toy.Formatter exposing (formatInterface, formatType, formatRange, formatError)
 
 import Toy.Position exposing (..)
-import Toy.Parser exposing (..)
+import Toy.Type as T exposing (..)
+import Toy.Parser as P exposing (..)
 import Toy.Checker exposing (Interface)
 import Toy.Error exposing (..)
 
@@ -11,7 +12,7 @@ formatInterface v =
     formatInterfaceHelp v.id (Just v.type_)
 
 
-formatInterfaceHelp : Identifier -> Maybe TypeExp -> String
+formatInterfaceHelp : Identifier -> Maybe Type -> String
 formatInterfaceHelp id type_ =
     let
         typeString =
@@ -25,25 +26,42 @@ formatInterfaceHelp id type_ =
         id ++ " : " ++ typeString
 
 
-formatType : TypeExp -> String
-formatType =
-    formatTypeHelp False
+formatTypeExp : TypeExp -> String
+formatTypeExp =
+    formatTypeExpHelp False
 
 
-formatTypeHelp : Bool -> TypeExp -> String
-formatTypeHelp isArg type_ =
+formatTypeExpHelp : Bool -> TypeExp -> String
+formatTypeExpHelp isArg type_ =
     case type_ of
-        ArrowType head tail ->
-            (formatTypeHelp False head ++ " -> " ++ formatTypeHelp False tail)
+        P.ArrowType head tail ->
+            (formatTypeExpHelp False head ++ " -> " ++ formatTypeExpHelp False tail)
                 |> parenIf isArg
 
-        TypeValue constructor args ->
-            (constructor :: List.map (formatTypeHelp True) args)
+        P.TypeValue constructor args ->
+            (constructor :: List.map (formatTypeExpHelp True) args)
                 |> String.join " "
                 |> parenIf (isArg && args /= [])
 
-        TypeVar name ->
+        P.TypeVar name ->
             name
+
+
+formatType : Type -> String
+formatType t =
+    -- TODO use the logic above
+    case t of
+        T.TypeVar id ->
+            toString id
+
+        T.TypeValue s args ->
+            String.join " " (s :: List.map formatType args)
+
+        T.TypeArrow t1 t2 ->
+            "(" ++ formatType t1 ++ " -> " ++ formatType t2 ++ ")"
+
+        T.TypeApply range t1 t2 ->
+            "$(" ++ formatType t1 ++ ", " ++ formatType t2 ++ ")"
 
 
 parenIf : Bool -> String -> String
@@ -80,13 +98,9 @@ formatErrorType e =
 
         TypeMismatch expected actual ->
             "expected type "
-                -- ++ formatType expected
-                ++
-                    toString expected
+                ++ formatType expected
                 ++ " but got type "
-                -- ++ formatType actual
-                ++
-                    toString actual
+                ++ formatType actual
 
         TooFewArguments ->
             "too few arguments"
@@ -102,10 +116,6 @@ formatErrorType e =
 
         TypeSignatureMismatch expected actual ->
             "type is declared as "
-                -- ++ formatType expected
-                ++
-                    toString expected
+                ++ formatType expected
                 ++ " but implemantation is type "
-                -- ++ formatType actual
-                ++
-                    toString actual
+                ++ formatType actual
