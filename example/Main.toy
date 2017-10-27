@@ -1,4 +1,4 @@
-a : Number
+a : Int
 a = 1
 
 b = a
@@ -8,12 +8,12 @@ c = b
 d = 2
 d = 3
 
-e : Number
+e : Int
 e : String
 
 f = g
 
-h : Number -> Number -> String
+h : Int -> Int -> String
 
 i = h 1
 
@@ -21,7 +21,7 @@ j = i 2
 
 k = j 1
 
-l : String -> Number
+l : String -> Int
 
 m = l 1
 
@@ -29,7 +29,7 @@ n : List Foo -> Bar
 
 o = n 1
 
-p : List (Number -> List (Int -> String) String) -> List (Int)
+p : List (Int -> List (Int -> String) String) -> List (Int)
 
 q : List (List String)
 

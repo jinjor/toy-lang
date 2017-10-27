@@ -30,7 +30,7 @@ type alias TypeConstructor =
 
 
 type Expression
-    = NumberLiteral String
+    = IntLiteral String
     | StringLiteral String
     | Ref Identifier
     | Call (Pos Expression) (Pos Expression)
@@ -337,7 +337,7 @@ assignment_ =
 number : Parser Expression
 number =
     inContext "number" <|
-        succeed NumberLiteral
+        succeed IntLiteral
             |= oneOf
                 [ map toString int
                 , map toString float

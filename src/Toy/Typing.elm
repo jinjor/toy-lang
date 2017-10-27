@@ -94,7 +94,7 @@ string =
 fromExp : Int -> Dict String Type -> Pos P.Expression -> ( Type, Int, Dict String Int )
 fromExp n typeVars exp =
     case exp.content of
-        P.NumberLiteral _ ->
+        P.IntLiteral _ ->
             ( int, n, Dict.empty )
 
         P.StringLiteral _ ->

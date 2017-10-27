@@ -118,7 +118,7 @@ addTypeUntilEndHelp v dict =
 lookupTypeForExpression : Variables -> Pos Expression -> Result Error ( TypeExp, Variables )
 lookupTypeForExpression vars exp =
     case exp.content of
-        NumberLiteral s ->
+        IntLiteral s ->
             Ok ( TypeValue "Number" [], vars )
 
         StringLiteral s ->

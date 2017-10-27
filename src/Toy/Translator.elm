@@ -39,7 +39,7 @@ translateModule impls =
 translateExpression : Pos P.Expression -> JsExpression
 translateExpression exp =
     case exp.content of
-        P.NumberLiteral n ->
+        P.IntLiteral n ->
             JsNumber n
 
         P.StringLiteral s ->
