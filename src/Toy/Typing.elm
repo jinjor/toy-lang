@@ -91,7 +91,11 @@ string =
     TypeValue "String" []
 
 
-fromExp : Int -> Dict String Type -> Pos P.Expression -> ( Type, Int, Dict String Int )
+type alias Dependency =
+    Dict String ( Range, Int )
+
+
+fromExp : Int -> Dict String Type -> Pos P.Expression -> ( Type, Int, Dependency )
 fromExp n typeVars exp =
     case exp.content of
         P.IntLiteral _ ->
@@ -104,7 +108,7 @@ fromExp n typeVars exp =
             typeVars
                 |> Dict.get a
                 |> Maybe.map (\t -> ( t, n, Dict.empty ))
-                |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a n )
+                |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a ( exp.range, n ) )
 
         P.Lambda (P.Patterns a _) exp ->
             let
@@ -119,7 +123,7 @@ fromExp n typeVars exp =
                     fromExp n typeVars a
 
                 rightTypeVars =
-                    Dict.union (Dict.map (\_ id -> TypeVar id) dep) typeVars
+                    Dict.union (Dict.map (\_ ( _, id ) -> TypeVar id) dep) typeVars
 
                 ( second, n2, dep2 ) =
                     fromExp n1 rightTypeVars b

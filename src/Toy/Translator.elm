@@ -54,8 +54,9 @@ translateExpression exp =
         P.Lambda patterns exp ->
             JsFunction (patternsToNames patterns) (translateExpression exp)
 
-        P.Let _ _ _ ->
-            Debug.crash "not implemented yet"
+        P.Let name a b ->
+            translateExpression
+                (Pos P.mockRange (P.Call (Pos P.mockRange (P.Lambda (P.Patterns name Nothing) b)) a))
 
 
 fullId : String -> String

@@ -6,6 +6,7 @@ import Test exposing (..)
 import Toy.Type exposing (..)
 import Toy.Typing as Typing exposing (..)
 import Toy.Parser as ToyParser
+import Toy.Checker as Checker
 import Toy.Formatter as Formatter exposing (formatType)
 import Dict exposing (Dict)
 import Parser
@@ -111,7 +112,7 @@ suite =
     (,)
 
 
-logParseResult : String -> ( Type, Int, Dict String Int ) -> ( Type, Int, Dict String Int )
+logParseResult : String -> ( Type, Int, Dependency ) -> ( Type, Int, Dependency )
 logParseResult s (( t, _, dep ) as r) =
     let
         _ =
@@ -180,8 +181,8 @@ testEval s envSource_ expected =
                                                 |> Tuple.first
                                         )
 
-                            env =
-                                resolveDependencies envTypes dep
+                            ( _, env ) =
+                                Checker.resolveDependencies envTypes dep
                         in
                             case evaluate env t of
                                 Ok ( t, env ) ->
@@ -222,22 +223,6 @@ testEval s envSource_ expected =
                     Err e ->
                         Expect.fail (ToyParser.formatError e)
             )
-
-
-resolveDependencies : Dict String Type -> Dict String Int -> Env
-resolveDependencies envTypes dep =
-    dep
-        |> Dict.toList
-        |> List.filterMap
-            (\( name, id ) ->
-                envTypes
-                    |> Dict.get name
-                    |> Maybe.map
-                        (\t ->
-                            ( id, t )
-                        )
-            )
-        |> Dict.fromList
 
 
 parseEnv : Dict String String -> Result Parser.Error (Dict String ToyParser.TypeExp)

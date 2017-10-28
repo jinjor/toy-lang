@@ -43,7 +43,6 @@ check module_ =
 
         result =
             checkAllTypes (Dict.toList envFromModule) envTypes
-                |> Debug.log "resultDict"
     in
         case result of
             Ok dict ->
@@ -56,42 +55,47 @@ check module_ =
                     |> List.map (\( id, exp ) -> Implementation id exp)
                 )
 
-            Err e ->
-                ( [ e ], [], [] )
+            Err errors ->
+                ( errors, [], [] )
 
 
-checkAllTypes : List ( String, ( Type, Dict String Int ) ) -> Dict String Type -> Result Error (Dict String Type)
+checkAllTypes :
+    List ( String, ( Type, Dependency ) )
+    -> Dict String Type
+    -> Result (List Error) (Dict String Type)
 checkAllTypes expList envTypes =
     case expList of
         [] ->
             Ok envTypes
 
         ( id, ( t, dep ) ) :: tail ->
-            let
-                env =
-                    resolveDependencies envTypes dep
-            in
-                evaluate env t
-                    |> Result.andThen
-                        (\( t, env ) ->
-                            checkAllTypes tail (Dict.insert id t envTypes)
-                        )
+            case resolveDependencies envTypes dep of
+                ( [], env ) ->
+                    evaluate env t
+                        |> Result.mapError List.singleton
+                        |> Result.andThen
+                            (\( t, env ) ->
+                                checkAllTypes tail (Dict.insert id t envTypes)
+                            )
+
+                ( errors, _ ) ->
+                    Err errors
 
 
-resolveDependencies : Dict String Type -> Dict String Int -> Env
+resolveDependencies : Dict String Type -> Dependency -> ( List Error, Env )
 resolveDependencies envTypes dep =
     dep
         |> Dict.toList
-        |> List.filterMap
-            (\( name, id ) ->
-                envTypes
-                    |> Dict.get name
-                    |> Maybe.map
-                        (\t ->
-                            ( id, t )
-                        )
+        |> List.foldl
+            (\( name, ( range, id ) ) ( errors, env ) ->
+                case Dict.get name envTypes of
+                    Just t ->
+                        ( errors, Dict.insert id t env )
+
+                    Nothing ->
+                        ( ( range, VariableNotDefined name ) :: errors, env )
             )
-        |> Dict.fromList
+            ( [], Dict.empty )
 
 
 getExpDict : List (Pos Statement) -> Dict String (Pos Expression)
