@@ -24,7 +24,7 @@ check : Module -> ( List Error, List Interface, List Implementation )
 check module_ =
     let
         expDict =
-            getExpDict module_
+            getExpDict module_.statements
 
         ( n, envFromModule ) =
             expDict
@@ -38,7 +38,7 @@ check module_ =
                     ( 0, Dict.empty )
 
         envTypes =
-            getTypeExpDict module_
+            getTypeExpDict module_.statements
                 |> Typing.fromTypeExpDict n
 
         result =
@@ -94,8 +94,8 @@ resolveDependencies envTypes dep =
         |> Dict.fromList
 
 
-getExpDict : Module -> Dict String (Pos Expression)
-getExpDict (Module statements) =
+getExpDict : List (Pos Statement) -> Dict String (Pos Expression)
+getExpDict statements =
     statements
         |> List.foldl
             (\statement dict ->
@@ -109,8 +109,8 @@ getExpDict (Module statements) =
             Dict.empty
 
 
-getTypeExpDict : Module -> Dict String (Pos TypeExp)
-getTypeExpDict (Module statements) =
+getTypeExpDict : List (Pos Statement) -> Dict String (Pos TypeExp)
+getTypeExpDict statements =
     statements
         |> List.foldl
             (\statement dict ->

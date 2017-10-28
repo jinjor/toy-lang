@@ -6,8 +6,10 @@ import Parser.LowLevel exposing (..)
 import Toy.Position exposing (..)
 
 
-type Module
-    = Module (List (Pos Statement))
+type alias Module =
+    { name : String
+    , statements : List (Pos Statement)
+    }
 
 
 type Statement
@@ -54,7 +56,7 @@ mockRange =
 module_ : Parser Module
 module_ =
     inContext "module" <|
-        succeed Module
+        succeed (Module "Main")
             |= statements ""
 
 

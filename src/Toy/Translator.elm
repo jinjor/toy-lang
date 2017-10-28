@@ -46,7 +46,7 @@ translateExpression exp =
             JsString s
 
         P.Ref id ->
-            JsRef (fullId id)
+            JsRef id
 
         P.Call first second ->
             JsCall (translateExpression first) (translateExpression second)

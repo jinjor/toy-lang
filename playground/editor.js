@@ -48,6 +48,8 @@ setTimeout(() => {
     Object.keys(editor.getSession().getMarkers(true)).forEach(id => {
       editor.getSession().removeMarker(id);
     });
+    console.log('interfaces');
+    console.log(interfaces.join('\n'));
 
     const annotations = errors.map(e => {
       const splitted = e.split(' ');
