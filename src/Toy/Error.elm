@@ -9,7 +9,8 @@ type alias Error =
 
 
 type ErrorType
-    = VariableNotDefined String
+    = DifinitionDuplicated String
+    | VariableNotDefined String
     | TypeNotDefined String
     | TypeMismatch Type Type
     | TooFewArguments

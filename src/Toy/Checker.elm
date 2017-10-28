@@ -23,7 +23,7 @@ type alias Implementation =
 check : Module -> ( List Error, List Interface, List Implementation )
 check module_ =
     let
-        expDict =
+        ( todo_handle_errors, expDict ) =
             getExpDict module_.statements
 
         ( n, envFromModule ) =
@@ -98,19 +98,24 @@ resolveDependencies envTypes dep =
             ( [], Dict.empty )
 
 
-getExpDict : List (Pos Statement) -> Dict String (Pos Expression)
+getExpDict : List (Pos Statement) -> ( List Error, Dict String (Pos Expression) )
 getExpDict statements =
     statements
         |> List.foldl
-            (\statement dict ->
+            (\statement ( errors, dict ) ->
                 case statement.content of
                     Assignment id exp ->
-                        Dict.insert id.content exp dict
+                        case Dict.get id.content dict of
+                            Just _ ->
+                                ( ( id.range, DifinitionDuplicated id.content ) :: errors, dict )
+
+                            Nothing ->
+                                ( errors, Dict.insert id.content exp dict )
 
                     _ ->
-                        dict
+                        ( errors, dict )
             )
-            Dict.empty
+            ( [], Dict.empty )
 
 
 getTypeExpDict : List (Pos Statement) -> Dict String (Pos TypeExp)

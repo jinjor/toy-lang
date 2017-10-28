@@ -90,8 +90,11 @@ formatPosition pos =
 formatErrorType : ErrorType -> String
 formatErrorType e =
     case e of
-        VariableNotDefined id ->
-            id ++ " is not defined"
+        DifinitionDuplicated name ->
+            name ++ " is already defined"
+
+        VariableNotDefined name ->
+            name ++ " is not defined"
 
         TypeNotDefined name ->
             "type " ++ name ++ "is not defined"
