@@ -1,6 +1,7 @@
 module Toy.Parser exposing (..)
 
 import Char
+import Set exposing (Set)
 import Parser exposing (..)
 import Parser.LowLevel exposing (..)
 import Toy.Position exposing (..)
@@ -89,19 +90,23 @@ statement : Parser (Pos Statement)
 statement =
     inContext "statement" <|
         positioned <|
-            succeed (\id f -> f id)
-                |= positioned identifier
-                |. spaces
-                |= oneOf
-                    [ assignment
-                    , typeSignature
-                    ]
+            (positioned identifier
+                |> andThen
+                    (\id ->
+                        succeed identity
+                            |. spaces
+                            |= oneOf
+                                [ assignment id
+                                , typeSignature id.content
+                                ]
+                    )
+            )
 
 
-typeSignature : Parser (Pos Identifier -> Statement)
-typeSignature =
+typeSignature : Identifier -> Parser Statement
+typeSignature id =
     inContext "type signature" <|
-        succeed (\typeExp id -> TypeSignature id.content typeExp)
+        succeed (TypeSignature id)
             |. symbol ":"
             |. spaces
             |= positioned typeExp
@@ -179,10 +184,10 @@ typeVariable =
                     |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-assignment : Parser (Pos Identifier -> Statement)
-assignment =
+assignment : Pos Identifier -> Parser Statement
+assignment id =
     inContext "assignment" <|
-        succeed (\exp id -> Assignment id exp)
+        succeed (Assignment id)
             |. symbol "="
             |. spaces
             |= expression
@@ -292,48 +297,62 @@ ref =
 doReturn : Parser (Pos Expression)
 doReturn =
     inContext "do return" <|
-        succeed makeLet
+        succeed identity
             |. keyword "do"
             |. spaces
-            |= lazy (\_ -> onelineStatementsUntilIn)
-            |. spaces
-            |= lazy (\_ -> expression)
+            |= oneOf
+                [ lazy (\_ -> return)
+                , lazy (\_ -> statement)
+                    |> andThen
+                        (\st ->
+                            let
+                                indent =
+                                    String.repeat (st.range.start.col - 1) " "
+                            in
+                                succeed (\tail ret -> makeLet (st :: tail) ret)
+                                    |= lazy (\_ -> statementsUntilReturn indent)
+                                    |. spaces
+                                    |= lazy (\_ -> return)
+                        )
+                ]
 
 
-makeLet : List ( Identifier, Pos Expression ) -> Pos Expression -> Pos Expression
-makeLet assignments exp =
-    case assignments of
+return : Parser (Pos Expression)
+return =
+    succeed identity
+        |. keyword "return"
+        |. spaces
+        |= lazy (\_ -> expression)
+
+
+makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
+makeLet statements exp =
+    case statements of
         [] ->
             exp
 
-        ( left, right ) :: xs ->
-            Pos mockRange (Let left right (makeLet xs exp))
+        x :: xs ->
+            case x.content of
+                Assignment left right ->
+                    Pos mockRange (Let left.content right (makeLet xs exp))
+
+                _ ->
+                    Debug.crash "not implemented yet"
 
 
-onelineStatementsUntilIn : Parser (List ( Identifier, Pos Expression ))
-onelineStatementsUntilIn =
-    inContext "oneline statements for debug" <|
-        oneOf
-            [ succeed []
-                |. keyword "return"
-            , succeed (::)
-                |= lazy (\_ -> assignment_)
-                |. spaces
-                |. symbol ";"
-                |. spaces
-                |= lazy (\_ -> onelineStatementsUntilIn)
-            ]
-
-
-assignment_ : Parser ( Identifier, Pos Expression )
-assignment_ =
-    inContext "assignment for debug" <|
-        succeed (,)
-            |= identifier
-            |. spaces
-            |. symbol "="
-            |. spaces
-            |= lazy (\_ -> expression)
+statementsUntilReturn : String -> Parser (List (Pos Statement))
+statementsUntilReturn indent =
+    inContext "statements until return" <|
+        succeed identity
+            |= oneOf
+                [ succeed []
+                    |. keyword "return"
+                , succeed (::)
+                    |. symbol indent
+                    |. spaces
+                    |= lazy (\_ -> statement)
+                    |= lazy (\_ -> statementsUntilReturn indent)
+                ]
 
 
 number : Parser Expression
@@ -422,3 +441,11 @@ formatProblem problem =
 
         Fail s ->
             s
+
+
+keywords : Set String
+keywords =
+    Set.fromList
+        [ "do"
+        , "return"
+        ]
