@@ -212,8 +212,7 @@ expression indent =
     inContext "expression" <|
         succeed makeCall
             |= lazy (\_ -> singleExpression)
-            |. spacesAtIndent indent
-            |= lazy (\_ -> functionTail)
+            |= lazy (\_ -> functionTail indent)
 
 
 makeCall : Pos Expression -> List (Pos Expression) -> Pos Expression
@@ -242,20 +241,29 @@ singleExpression =
             , succeed identity
                 |. symbol "("
                 |. spacesWithLF
-                |= lazy (\_ -> expression -1)
+                |= lazy (\_ -> expression 0)
                 |. spacesWithLF
                 |. symbol ")"
             ]
 
 
-functionTail : Parser (List (Pos Expression))
-functionTail =
+functionTail : Int -> Parser (List (Pos Expression))
+functionTail indent =
     inContext "function tail" <|
         oneOf
-            [ succeed (::)
-                |= lazy (\_ -> singleExpression)
-                |. spaces
-                |= lazy (\_ -> functionTail)
+            [ (delayedCommit spacesWithLF
+                (getCol
+                    |> andThen
+                        (\i ->
+                            if i > indent then
+                                succeed (::)
+                                    |= lazy (\_ -> singleExpression)
+                                    |= lazy (\_ -> functionTail indent)
+                            else
+                                succeed []
+                        )
+                )
+              )
             , succeed []
             ]
 
@@ -268,8 +276,8 @@ lambda =
             |= patterns
             |. spaces
             |. symbol "->"
-            |. spaces
-            |= lazy (\_ -> expression -1)
+            |. spacesWithLF
+            |= lazy (\_ -> expression 0)
 
 
 patterns : Parser Patterns
@@ -306,7 +314,7 @@ doReturn =
         succeed makeLet
             |. keyword "do"
             |. spaces
-            |= (getIndentLevel
+            |= (getCol
                     |> andThen
                         (\i ->
                             oneOf
@@ -319,7 +327,7 @@ doReturn =
                )
             |. keyword "return"
             |. spaces
-            |= lazy (\_ -> expression -1)
+            |= lazy (\_ -> expression 0)
 
 
 makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
@@ -354,7 +362,7 @@ statementsUntilReturn indent =
 
 checkIndentLevel : Int -> Parser ()
 checkIndentLevel expected =
-    getIndentLevel
+    getCol
         |> andThen
             (\i ->
                 if i == expected then
@@ -382,15 +390,6 @@ string =
                     ignore zeroOrMore (\c -> c /= '"')
                )
             |. symbol "\""
-
-
-{-| returns True if continuing
--}
-spacesAtIndent : Int -> Parser Bool
-spacesAtIndent indent =
-    succeed (\i -> i > indent)
-        |. spacesWithLF
-        |= getIndentLevel
 
 
 spacesWithLF : Parser ()

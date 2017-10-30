@@ -15,19 +15,28 @@ suite =
         [ describe "number"
             [ testParse number "1" [ ( "Int", 1 ) ]
             ]
-        , describe "expression"
-            [ testParse (expression 0) "( 1 )" [ ( "Int", 1 ) ]
-            , testParse (expression 0) "(\n1\n)" [ ( "Int", 1 ) ]
+        , describe "lambda"
+            [ testParse (expression 1) "\\a->1" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "\\a->\n1" [ ( "Int", 1 ) ]
+            ]
+        , describe "parens"
+            [ testParse (expression 1) "( 1 )" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "(\n1\n)" [ ( "Int", 1 ) ]
+            ]
+        , describe "call"
+            [ testParse (expression 1) "a 1" [ ( "Call", 1 ), ( "Ref", 1 ), ( "Int", 1 ) ]
+            , testParse (expression 1) "a\n 1" [ ( "Call", 1 ), ( "Ref", 1 ), ( "Int", 1 ) ]
+            , testParse (expression 1) "a\n1" [ ( "Call", 0 ), ( "Ref", 1 ), ( "Int", 0 ) ]
             ]
         , describe "do-return"
-            [ testParse (expression 0) "do a = 1 return a" [ ( "Assignment", 1 ) ]
-            , testParse (expression 0) "do a = 1\n   b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
+            [ testParse (expression 1) "do a = 1 return a" [ ( "Assignment", 1 ) ]
+            , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
             ]
         , describe "statement"
-            [ testParse (statement 0) "a:Int" [ ( "TypeSignature", 1 ) ]
-            , testParse (statement 0) "a : Int " [ ( "TypeSignature", 1 ) ]
-            , testParse (statement 0) "a=1" [ ( "Assignment", 1 ) ]
-            , testParse (statement 0) "a = 1 " [ ( "Assignment", 1 ) ]
+            [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
+            , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
+            , testParse (statement 1) "a=1" [ ( "Assignment", 1 ) ]
+            , testParse (statement 1) "a = 1 " [ ( "Assignment", 1 ) ]
             ]
         ]
 
