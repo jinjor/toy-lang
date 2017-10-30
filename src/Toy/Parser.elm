@@ -58,20 +58,21 @@ module_ : Parser Module
 module_ =
     inContext "module" <|
         succeed (Module "Main")
-            |= statements ""
+            |= statements 0
 
 
-statements : String -> Parser (List (Pos Statement))
+statements : Int -> Parser (List (Pos Statement))
 statements indent =
     inContext "statements" <|
         succeed identity
             |. repeat zeroOrMore emptyLine
+            |. spaces
             |= oneOf
-                [ symbol indent
+                [ symbol (String.repeat indent " ")
                     |> andThen
                         (\_ ->
                             succeed (::)
-                                |= statement
+                                |= statement indent
                                 |. spaces
                                 |. symbol "\n"
                                 |= statements indent
@@ -86,13 +87,13 @@ emptyLine =
         |. symbol "\n"
 
 
-statement : Parser (Pos Statement)
-statement =
+statement : Int -> Parser (Pos Statement)
+statement indent =
     inContext "statement" <|
         positioned <|
             oneOf
                 [ typeSignature
-                , lazy (\_ -> assignment)
+                , lazy (\_ -> assignment indent)
                 ]
 
 
@@ -183,8 +184,8 @@ typeVariable =
                     |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-assignment : Parser Statement
-assignment =
+assignment : Int -> Parser Statement
+assignment indent =
     inContext "assignment" <|
         delayedCommitMap Assignment
             (succeed identity
@@ -194,7 +195,7 @@ assignment =
             (succeed identity
                 |. symbol "="
                 |. spaces
-                |= lazy (\_ -> expression)
+                |= lazy (\_ -> expression indent)
             )
 
 
@@ -206,12 +207,12 @@ identifier =
                 |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-expression : Parser (Pos Expression)
-expression =
+expression : Int -> Parser (Pos Expression)
+expression indent =
     inContext "expression" <|
         succeed makeCall
             |= lazy (\_ -> singleExpression)
-            |. spaces
+            |. spacesAtIndent indent
             |= lazy (\_ -> functionTail)
 
 
@@ -240,9 +241,9 @@ singleExpression =
             , positioned ref
             , succeed identity
                 |. symbol "("
-                |. spaces
-                |= lazy (\_ -> expression)
-                |. spaces
+                |. spacesWithLF
+                |= lazy (\_ -> expression -1)
+                |. spacesWithLF
                 |. symbol ")"
             ]
 
@@ -268,7 +269,7 @@ lambda =
             |. spaces
             |. symbol "->"
             |. spaces
-            |= lazy (\_ -> expression)
+            |= lazy (\_ -> expression -1)
 
 
 patterns : Parser Patterns
@@ -310,7 +311,7 @@ doReturn =
                         (\i ->
                             oneOf
                                 [ delayedCommitMap (::)
-                                    (lazy (\_ -> statement))
+                                    (lazy (\_ -> statement i))
                                     (lazy (\_ -> statementsUntilReturn i))
                                 , succeed []
                                 ]
@@ -318,7 +319,7 @@ doReturn =
                )
             |. keyword "return"
             |. spaces
-            |= lazy (\_ -> expression)
+            |= lazy (\_ -> expression -1)
 
 
 makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
@@ -337,7 +338,7 @@ makeLet statements exp =
 
 
 statementsUntilReturn : Int -> Parser (List (Pos Statement))
-statementsUntilReturn topIndent =
+statementsUntilReturn indent =
     inContext "statements until return" <|
         succeed identity
             |= oneOf
@@ -345,9 +346,9 @@ statementsUntilReturn topIndent =
                     |. keyword "return"
                 , succeed (::)
                     |. spaces
-                    |. checkIndentLevel topIndent
-                    |= lazy (\_ -> statement)
-                    |= lazy (\_ -> statementsUntilReturn topIndent)
+                    |. checkIndentLevel indent
+                    |= lazy (\_ -> statement indent)
+                    |= lazy (\_ -> statementsUntilReturn indent)
                 ]
 
 
