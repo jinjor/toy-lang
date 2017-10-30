@@ -274,7 +274,7 @@ lambda =
         succeed Lambda
             |. symbol "\\"
             |= patterns
-            |. spaces
+            |. spacesWithLF
             |. symbol "->"
             |. spacesWithLF
             |= lazy (\_ -> expression 0)

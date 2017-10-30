@@ -20,6 +20,7 @@ suite =
         , describe "lambda"
             [ testParse (expression 1) "\\a->1" [ ( "Int", 1 ) ]
             , testParse (expression 1) "\\a->\n1" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "\\a\n->1" [ ( "Int", 1 ) ]
             ]
         , describe "parens"
             [ testParse (expression 1) "( 1 )" [ ( "Int", 1 ) ]
@@ -39,6 +40,9 @@ suite =
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a=1" [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a = 1 " [ ( "Assignment", 1 ) ]
+            , testParse (statement 1) "a\n= 1 " [ ( "Assignment", 1 ) ]
+            , testParse (statement 1) "a =\n 1 " [ ( "Assignment", 1 ) ]
+            , testParse (statement 1) "a\n =\n 1 " [ ( "Assignment", 1 ) ]
             ]
         ]
 
