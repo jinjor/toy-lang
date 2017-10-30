@@ -302,32 +302,23 @@ ref =
 doReturn : Parser (Pos Expression)
 doReturn =
     inContext "do return" <|
-        succeed identity
+        succeed makeLet
             |. keyword "do"
             |. spaces
-            |= oneOf
-                [ lazy (\_ -> return)
-                , lazy (\_ -> statement)
+            |= (getIndentLevel
                     |> andThen
-                        (\st ->
-                            let
-                                indent =
-                                    String.repeat (st.range.start.col - 1) " "
-                            in
-                                succeed (\tail ret -> makeLet (st :: tail) ret)
-                                    |= lazy (\_ -> statementsUntilReturn indent)
-                                    |. spaces
-                                    |= lazy (\_ -> return)
+                        (\i ->
+                            oneOf
+                                [ delayedCommitMap (::)
+                                    (lazy (\_ -> statement))
+                                    (lazy (\_ -> statementsUntilReturn i))
+                                , succeed []
+                                ]
                         )
-                ]
-
-
-return : Parser (Pos Expression)
-return =
-    succeed identity
-        |. keyword "return"
-        |. spaces
-        |= lazy (\_ -> expression)
+               )
+            |. keyword "return"
+            |. spaces
+            |= lazy (\_ -> expression)
 
 
 makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
@@ -345,19 +336,31 @@ makeLet statements exp =
                     Debug.crash "not implemented yet"
 
 
-statementsUntilReturn : String -> Parser (List (Pos Statement))
-statementsUntilReturn indent =
+statementsUntilReturn : Int -> Parser (List (Pos Statement))
+statementsUntilReturn topIndent =
     inContext "statements until return" <|
         succeed identity
             |= oneOf
                 [ succeed []
                     |. keyword "return"
                 , succeed (::)
-                    |. symbol indent
                     |. spaces
+                    |. checkIndentLevel topIndent
                     |= lazy (\_ -> statement)
-                    |= lazy (\_ -> statementsUntilReturn indent)
+                    |= lazy (\_ -> statementsUntilReturn topIndent)
                 ]
+
+
+checkIndentLevel : Int -> Parser ()
+checkIndentLevel expected =
+    getIndentLevel
+        |> andThen
+            (\i ->
+                if i == expected then
+                    succeed ()
+                else
+                    fail "indent error"
+            )
 
 
 number : Parser Expression
