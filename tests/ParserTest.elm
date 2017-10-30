@@ -1,7 +1,6 @@
 module ParserTest exposing (..)
 
 import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Toy.Parser as ToyParser exposing (..)
 import Toy.Formatter as Formatter
@@ -12,8 +11,11 @@ import Parser exposing (Parser)
 suite : Test
 suite =
     describe "Parsing"
-        [ describe "number"
+        [ describe "int"
             [ testParse number "1" [ ( "Int", 1 ) ]
+            ]
+        , describe "String"
+            [ testParse string "\"foo\"" [ ( "foo", 1 ) ]
             ]
         , describe "lambda"
             [ testParse (expression 1) "\\a->1" [ ( "Int", 1 ) ]
@@ -28,10 +30,10 @@ suite =
             , testParse (expression 1) "a\n 1" [ ( "Call", 1 ), ( "Ref", 1 ), ( "Int", 1 ) ]
             , testParse (expression 1) "a\n1" [ ( "Call", 0 ), ( "Ref", 1 ), ( "Int", 0 ) ]
             ]
-        , describe "do-return"
-            [ testParse (expression 1) "do a = 1 return a" [ ( "Assignment", 1 ) ]
-            , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
-            ]
+          -- , describe "do-return"
+          --     [ testParse (expression 1) "do a = 1 return a" [ ( "Assignment", 1 ) ]
+          --     , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
+          --     ]
         , describe "statement"
             [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
