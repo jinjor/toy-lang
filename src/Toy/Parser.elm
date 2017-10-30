@@ -369,7 +369,6 @@ number =
         succeed IntLiteral
             |= oneOf
                 [ map toString int
-                , map toString float
                 ]
 
 
@@ -382,6 +381,20 @@ string =
                     ignore zeroOrMore (\c -> c /= '"')
                )
             |. symbol "\""
+
+
+{-| returns True if continuing
+-}
+spacesAtIndent : Int -> Parser Bool
+spacesAtIndent indent =
+    succeed (\i -> i > indent)
+        |. spacesWithLF
+        |= getIndentLevel
+
+
+spacesWithLF : Parser ()
+spacesWithLF =
+    ignore zeroOrMore (\c -> c == ' ' || c == '\n')
 
 
 spaces : Parser ()
