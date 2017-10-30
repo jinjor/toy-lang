@@ -90,26 +90,25 @@ statement : Parser (Pos Statement)
 statement =
     inContext "statement" <|
         positioned <|
-            (positioned identifier
-                |> andThen
-                    (\id ->
-                        succeed identity
-                            |. spaces
-                            |= oneOf
-                                [ assignment id
-                                , typeSignature id.content
-                                ]
-                    )
-            )
+            oneOf
+                [ typeSignature
+                , lazy (\_ -> assignment)
+                ]
 
 
-typeSignature : Identifier -> Parser Statement
-typeSignature id =
+typeSignature : Parser Statement
+typeSignature =
     inContext "type signature" <|
-        succeed (TypeSignature id)
-            |. symbol ":"
-            |. spaces
-            |= positioned typeExp
+        delayedCommitMap (\id t -> TypeSignature id.content t)
+            (succeed identity
+                |= positioned identifier
+                |. spaces
+            )
+            (succeed identity
+                |. symbol ":"
+                |. spaces
+                |= positioned typeExp
+            )
 
 
 typeExp : Parser TypeExp
@@ -184,13 +183,19 @@ typeVariable =
                     |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
-assignment : Pos Identifier -> Parser Statement
-assignment id =
+assignment : Parser Statement
+assignment =
     inContext "assignment" <|
-        succeed (Assignment id)
-            |. symbol "="
-            |. spaces
-            |= expression
+        delayedCommitMap Assignment
+            (succeed identity
+                |= positioned identifier
+                |. spaces
+            )
+            (succeed identity
+                |. symbol "="
+                |. spaces
+                |= lazy (\_ -> expression)
+            )
 
 
 identifier : Parser Identifier

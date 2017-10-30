@@ -6,25 +6,32 @@ import Test exposing (..)
 import Toy.Parser as ToyParser exposing (..)
 import Toy.Formatter as Formatter
 import Dict exposing (Dict)
-import Parser
+import Parser exposing (Parser)
 
 
 suite : Test
 suite =
     describe "Parsing"
         [ describe "do-return"
-            [ testParse "do\n  a = 1\n  b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
+            [ testParse expression "do a = 1 return a" [ ( "Assignment", 1 ) ]
+            , testParse expression "do\n  a = 1\n  b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
+            ]
+        , describe "statement"
+            [ testParse statement "a:Int" [ ( "TypeSignature", 1 ) ]
+            , testParse statement "a : Int " [ ( "TypeSignature", 1 ) ]
+            , testParse statement "a=1" [ ( "Assignment", 1 ) ]
+            , testParse statement "a = 1 " [ ( "Assignment", 1 ) ]
             ]
         ]
 
 
-testParse : String -> List ( String, Int ) -> Test
-testParse s expectedList =
+testParse : Parser a -> String -> List ( String, Int ) -> Test
+testParse parser s expectedList =
     test s
         (\_ ->
-            case Parser.run ToyParser.expression s of
+            case Parser.run parser s of
                 Ok exp ->
-                    if checkAll expectedList s then
+                    if checkAll expectedList (toString exp) then
                         Expect.pass
                     else
                         Expect.fail (toString exp ++ " does not satisfy " ++ toString expectedList)
