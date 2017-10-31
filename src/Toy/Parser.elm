@@ -312,23 +312,27 @@ ref =
 doReturn : Parser (Pos Expression)
 doReturn =
     inContext "do return" <|
-        succeed makeLet
-            |. keyword "do"
-            |. spaces
-            |= (getCol
-                    |> andThen
-                        (\i ->
-                            oneOf
-                                [ delayedCommitMap (::)
-                                    (lazy (\_ -> statement i))
-                                    (lazy (\_ -> statementsUntilReturn i))
-                                , succeed []
-                                ]
-                        )
-               )
-            |. keyword "return"
-            |. spaces
-            |= lazy (\_ -> expression 0)
+        delayedCommit
+            (succeed ()
+                |. keyword "do"
+                |. spaces
+            )
+            (succeed makeLet
+                |= (getCol
+                        |> andThen
+                            (\i ->
+                                oneOf
+                                    [ delayedCommitMap (::)
+                                        (lazy (\_ -> statement i))
+                                        (lazy (\_ -> statementsUntilReturn i))
+                                    , succeed []
+                                    ]
+                            )
+                   )
+                |. keyword "return"
+                |. spaces
+                |= lazy (\_ -> expression 0)
+            )
 
 
 makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
