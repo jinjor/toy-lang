@@ -38,6 +38,10 @@ suite =
         , describe "statement"
             [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
+            , testParse (statement 1) "a\n :\n Int " [ ( "TypeSignature", 1 ) ]
+            , testParse (statement 1) "a\n :\n Dict\n a\n b" [ ( "TypeSignature", 1 ) ]
+            , testParse (statement 1) "a\n :\n Dict\n a\n b\n ->\n foo" [ ( "TypeSignature", 1 ), ( "foo", 1 ) ]
+            , testParse (statement 1) "a\n :\n (\n a\n ->\n foo\n )" [ ( "TypeSignature", 1 ), ( "foo", 1 ) ]
             , testParse (statement 1) "a=1" [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a = 1 " [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a\n = 1 " [ ( "Assignment", 1 ) ]

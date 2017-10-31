@@ -104,11 +104,11 @@ typeSignature =
         delayedCommitMap (\id t -> TypeSignature id.content t)
             (succeed identity
                 |= positioned identifier
-                |. spaces
+                |. spacesWithLF
             )
             (succeed identity
                 |. symbol ":"
-                |. spaces
+                |. spacesWithLF
                 |= positioned typeExp
             )
 
@@ -120,11 +120,11 @@ typeExp =
             |> andThen
                 (\head ->
                     succeed identity
-                        |. spaces
+                        |. spacesWithLF
                         |= oneOf
                             [ succeed (ArrowType head)
                                 |. symbol "->"
-                                |. spaces
+                                |. spacesWithLF
                                 |= lazy (\_ -> typeExp)
                             , succeed head
                             ]
@@ -138,9 +138,9 @@ singleTypeExp =
         oneOf
             [ succeed identity
                 |. symbol "("
-                |. spaces
+                |. spacesWithLF
                 |= lazy (\_ -> typeExp)
-                |. spaces
+                |. spacesWithLF
                 |. symbol ")"
             , lazy (\_ -> typeValue)
             , typeVariable
@@ -152,7 +152,7 @@ typeValue =
     inContext "type value" <|
         succeed TypeValue
             |= typeConstructor
-            |. spaces
+            |. spacesWithLF
             |= lazy (\_ -> typeArguments)
 
 
@@ -162,7 +162,7 @@ typeArguments =
         oneOf
             [ succeed (::)
                 |= lazy (\_ -> singleTypeExp)
-                |. spaces
+                |. spacesWithLF
                 |= lazy (\_ -> typeArguments)
             , succeed []
             ]
