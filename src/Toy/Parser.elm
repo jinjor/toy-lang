@@ -65,19 +65,20 @@ statements : Int -> Parser (List (Pos Statement))
 statements indent =
     inContext "statements" <|
         succeed identity
-            |. repeat zeroOrMore emptyLine
-            |. spaces
+            |. spacesWithLF
             |= oneOf
-                [ symbol (String.repeat indent " ")
+                [ succeed []
+                    |. end
+                , getCol
                     |> andThen
-                        (\_ ->
-                            succeed (::)
-                                |= statement indent
-                                |. spaces
-                                |. symbol "\n"
-                                |= statements indent
+                        (\i ->
+                            if i == indent then
+                                succeed (::)
+                                    |= statement indent
+                                    |= statements indent
+                            else
+                                succeed []
                         )
-                , succeed []
                 ]
 
 
@@ -190,11 +191,11 @@ assignment indent =
         delayedCommitMap Assignment
             (succeed identity
                 |= positioned identifier
-                |. spaces
+                |. spacesWithLF
             )
             (succeed identity
                 |. symbol "="
-                |. spaces
+                |. spacesWithLF
                 |= lazy (\_ -> expression indent)
             )
 

@@ -14,7 +14,7 @@ suite =
         [ describe "int"
             [ testParse number "1" [ ( "Int", 1 ) ]
             ]
-        , describe "String"
+        , describe "string"
             [ testParse string "\"foo\"" [ ( "foo", 1 ) ]
             ]
         , describe "lambda"
@@ -40,9 +40,10 @@ suite =
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a=1" [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a = 1 " [ ( "Assignment", 1 ) ]
-            , testParse (statement 1) "a\n= 1 " [ ( "Assignment", 1 ) ]
+            , testParse (statement 1) "a\n = 1 " [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a =\n 1 " [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a\n =\n 1 " [ ( "Assignment", 1 ) ]
+            , testParse (statements 1) "a=1\nb=2 " [ ( "Assignment", 2 ) ]
             ]
         ]
 
