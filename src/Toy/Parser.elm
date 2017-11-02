@@ -286,7 +286,7 @@ patterns =
     inContext "patterns" <|
         succeed Patterns
             |= pattern
-            |. spaces
+            |. spacesWithLF
             |= oneOf
                 [ succeed Just
                     |= lazy (\_ -> patterns)

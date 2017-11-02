@@ -24,6 +24,8 @@ suite =
             [ testParse (expression 1) "\\a->1" [ ( "Int", 1 ) ]
             , testParse (expression 1) "\\a->\n1" [ ( "Int", 1 ) ]
             , testParse (expression 1) "\\a\n->1" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "\\foo bar->1" [ ( "foo", 1 ), ( "bar", 1 ), ( "Int", 1 ) ]
+            , testParse (expression 1) "\\foo\n bar\n ->\n 1" [ ( "foo", 1 ), ( "bar", 1 ), ( "Int", 1 ) ]
             ]
         , describe "parens"
             [ testParse (expression 1) "( 1 )" [ ( "Int", 1 ) ]

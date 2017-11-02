@@ -110,12 +110,15 @@ fromExp n typeVars exp =
                 |> Maybe.map (\t -> ( t, n, Dict.empty ))
                 |> Maybe.withDefault ( TypeVar n, n + 1, Dict.singleton a ( exp.range, n ) )
 
-        P.Lambda (P.Patterns a _) exp ->
-            let
-                ( right, n1, dep ) =
-                    fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
-            in
-                ( TypeArrow (TypeVar n) right, n1, dep )
+        P.Lambda (P.Patterns a tail) exp ->
+            if tail /= Nothing then
+                Debug.crash "does not support multiple args yet"
+            else
+                let
+                    ( right, n1, dep ) =
+                        fromExp (n + 1) (Dict.insert a (TypeVar n) typeVars) exp
+                in
+                    ( TypeArrow (TypeVar n) right, n1, dep )
 
         P.Call a b ->
             let
