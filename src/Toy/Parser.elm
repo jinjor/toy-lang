@@ -65,7 +65,7 @@ statements : Int -> Parser (List (Pos Statement))
 statements indent =
     inContext "statements" <|
         succeed identity
-            |. spacesWithLF
+            |. spaces
             |= oneOf
                 [ succeed []
                     |. end
@@ -104,11 +104,11 @@ typeSignature =
         delayedCommitMap (\id t -> TypeSignature id.content t)
             (succeed identity
                 |= positioned identifier
-                |. spacesWithLF
+                |. spaces
             )
             (succeed identity
                 |. symbol ":"
-                |. spacesWithLF
+                |. spaces
                 |= positioned typeExp
             )
 
@@ -120,11 +120,11 @@ typeExp =
             |> andThen
                 (\head ->
                     succeed identity
-                        |. spacesWithLF
+                        |. spaces
                         |= oneOf
                             [ succeed (ArrowType head)
                                 |. symbol "->"
-                                |. spacesWithLF
+                                |. spaces
                                 |= lazy (\_ -> typeExp)
                             , succeed head
                             ]
@@ -138,9 +138,9 @@ singleTypeExp =
         oneOf
             [ succeed identity
                 |. symbol "("
-                |. spacesWithLF
+                |. spaces
                 |= lazy (\_ -> typeExp)
-                |. spacesWithLF
+                |. spaces
                 |. symbol ")"
             , lazy (\_ -> typeValue)
             , typeVariable
@@ -152,7 +152,7 @@ typeValue =
     inContext "type value" <|
         succeed TypeValue
             |= typeConstructor
-            |. spacesWithLF
+            |. spaces
             |= lazy (\_ -> typeArguments)
 
 
@@ -162,7 +162,7 @@ typeArguments =
         oneOf
             [ succeed (::)
                 |= lazy (\_ -> singleTypeExp)
-                |. spacesWithLF
+                |. spaces
                 |= lazy (\_ -> typeArguments)
             , succeed []
             ]
@@ -191,11 +191,11 @@ assignment indent =
         delayedCommitMap Assignment
             (succeed identity
                 |= positioned identifier
-                |. spacesWithLF
+                |. spaces
             )
             (succeed identity
                 |. symbol "="
-                |. spacesWithLF
+                |. spaces
                 |= lazy (\_ -> expression indent)
             )
 
@@ -254,9 +254,9 @@ singleExpression =
             , positioned ref
             , succeed identity
                 |. symbol "("
-                |. spacesWithLF
+                |. spaces
                 |= lazy (\_ -> expression 0)
-                |. spacesWithLF
+                |. spaces
                 |. symbol ")"
             ]
 
@@ -264,7 +264,7 @@ singleExpression =
 functionTail : Int -> Parser (List (Pos Expression))
 functionTail indent =
     inContext "function tail" <|
-        delayedCommit spacesWithLF
+        delayedCommit spaces
             (getCol
                 |> andThen
                     (\i ->
@@ -287,9 +287,9 @@ lambda =
         succeed Lambda
             |. symbol "\\"
             |= patterns
-            |. spacesWithLF
+            |. spaces
             |. symbol "->"
-            |. spacesWithLF
+            |. spaces
             |= lazy (\_ -> expression 0)
 
 
@@ -298,7 +298,7 @@ patterns =
     inContext "patterns" <|
         succeed Patterns
             |= pattern
-            |. spacesWithLF
+            |. spaces
             |= oneOf
                 [ succeed Just
                     |= lazy (\_ -> patterns)
@@ -327,7 +327,7 @@ doReturn =
         delayedCommit
             (succeed ()
                 |. keyword "do"
-                |. spacesWithLF1
+                |. spaces1
             )
             (getCol
                 |> andThen
@@ -343,7 +343,7 @@ doReturnTail indent statements =
         [ delayedCommit
             (succeed ()
                 |. keyword "return"
-                |. spacesWithLF1
+                |. spaces1
             )
             (succeed (makeLet statements)
                 |= lazy (\_ -> expression indent)
@@ -354,7 +354,7 @@ doReturnTail indent statements =
                     |> andThen
                         (\s ->
                             succeed identity
-                                |. spacesWithLF
+                                |. spaces
                                 |= doReturnTail indent (statements ++ [ s ])
                         )
                )
@@ -408,13 +408,13 @@ string =
             |. symbol "\""
 
 
-spacesWithLF : Parser ()
-spacesWithLF =
+spaces : Parser ()
+spaces =
     ignore zeroOrMore (\c -> c == ' ' || c == '\n')
 
 
-spacesWithLF1 : Parser ()
-spacesWithLF1 =
+spaces1 : Parser ()
+spaces1 =
     ignore oneOrMore (\c -> c == ' ' || c == '\n')
 
 
