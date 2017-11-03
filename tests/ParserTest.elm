@@ -58,7 +58,11 @@ suite =
             , testParse (statement 1) "a\n = 1 " [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a =\n 1 " [ ( "Assignment", 1 ) ]
             , testParse (statement 1) "a\n =\n 1 " [ ( "Assignment", 1 ) ]
-            , testParse (statements 1) "a=1\nb=2 " [ ( "Assignment", 2 ) ]
+            ]
+        , describe "module"
+            [ testParse (module_) "a=1\nb=2 " [ ( "Assignment", 2 ) ]
+            , testParse (module_) "a:String\na=2 " [ ( "TypeSignature", 1 ), ( "Assignment", 1 ) ]
+            , testParse (module_) "\n\n\na=1\n\n\n\nb=3\n\n\n\n\n" [ ( "Assignment", 2 ) ]
             ]
         ]
 

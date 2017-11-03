@@ -58,7 +58,7 @@ module_ : Parser Module
 module_ =
     inContext "module" <|
         succeed (Module "Main")
-            |= statements 0
+            |= statements 1
 
 
 statements : Int -> Parser (List (Pos Statement))
@@ -106,17 +106,21 @@ typeSignature =
                 |= positioned identifier
                 |. spaces
             )
-            (succeed identity
-                |. symbol ":"
-                |. spaces
-                |= positioned typeExp
+            (getCol
+                |> andThen
+                    (\indent ->
+                        succeed identity
+                            |. symbol ":"
+                            |. spaces
+                            |= positioned (typeExp indent)
+                    )
             )
 
 
-typeExp : Parser TypeExp
-typeExp =
+typeExp : Int -> Parser TypeExp
+typeExp indent =
     inContext "type expression" <|
-        (lazy (\_ -> singleTypeExp)
+        (lazy (\_ -> singleTypeExp indent)
             |> andThen
                 (\head ->
                     succeed identity
@@ -125,45 +129,45 @@ typeExp =
                             [ succeed (ArrowType head)
                                 |. symbol "->"
                                 |. spaces
-                                |= lazy (\_ -> typeExp)
+                                |= lazy (\_ -> typeExp indent)
                             , succeed head
                             ]
                 )
         )
 
 
-singleTypeExp : Parser TypeExp
-singleTypeExp =
+singleTypeExp : Int -> Parser TypeExp
+singleTypeExp indent =
     inContext "single type expression" <|
         oneOf
             [ succeed identity
                 |. symbol "("
                 |. spaces
-                |= lazy (\_ -> typeExp)
+                |= lazy (\_ -> typeExp indent)
                 |. spaces
                 |. symbol ")"
-            , lazy (\_ -> typeValue)
+            , lazy (\_ -> typeValue indent)
             , typeVariable
             ]
 
 
-typeValue : Parser TypeExp
-typeValue =
+typeValue : Int -> Parser TypeExp
+typeValue indent =
     inContext "type value" <|
         succeed TypeValue
             |= typeConstructor
             |. spaces
-            |= lazy (\_ -> typeArguments)
+            |= lazy (\_ -> typeArguments indent)
 
 
-typeArguments : Parser (List TypeExp)
-typeArguments =
+typeArguments : Int -> Parser (List TypeExp)
+typeArguments indent =
     inContext "type arguments" <|
         oneOf
             [ succeed (::)
-                |= lazy (\_ -> singleTypeExp)
+                |= lazy (\_ -> singleTypeExp indent)
                 |. spaces
-                |= lazy (\_ -> typeArguments)
+                |= lazy (\_ -> typeArguments indent)
             , succeed []
             ]
 

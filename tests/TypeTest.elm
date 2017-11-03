@@ -188,7 +188,7 @@ testEval s envSource_ expected =
 parseEnv : Dict String String -> Result Parser.Error (Dict String ToyParser.TypeExp)
 parseEnv envSource =
     envSource
-        |> Dict.map (\_ s -> Parser.run ToyParser.typeExp s)
+        |> Dict.map (\_ s -> Parser.run (ToyParser.typeExp 1) s)
         |> Dict.foldl
             (\name result results ->
                 results
