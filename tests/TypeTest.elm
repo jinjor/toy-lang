@@ -15,31 +15,7 @@ import Parser
 suite : Test
 suite =
     describe "Typing"
-        [ describe "fromExp"
-            [ testFromExp "1"
-            , testFromExp "\"\""
-            , testFromExp "a"
-            , testFromExp "f 1"
-            , testFromExp "f 1 \"\""
-            , testFromExp "(f a) 1"
-            , testFromExp "f (a 1) 2"
-            , testFromExp "(f a) 1 2"
-            , testFromExp "f 1 (a 2)"
-            , testFromExp "f a"
-            , testFromExp "\\a -> 1"
-            , testFromExp "\\a -> a"
-            , testFromExp "\\a -> increment a"
-            , testFromExp "\\a -> add a 1"
-            , testFromExp "\\a -> \\b -> 1"
-            , testFromExp "\\a -> \\b -> a"
-            , testFromExp "\\a -> \\a -> a"
-            , testFromExp "do a = 1\nreturn a"
-            , testFromExp "do a = (\\a -> a)\n return a"
-            , testFromExp "do a = (\\a -> a)\n return f (a 1) (a \"\")"
-            , testFromExp "(\\a -> f (a 1) (a \"\")) (\\a -> a)"
-            , testFromExp "do\n a=1\n b=2\n return add a b"
-            ]
-        , describe "eval"
+        [ describe "eval"
             [ testEval "a" [] ""
             , testEval "\\a -> b" [] ""
             , testEval "\\a -> b" [ "b" => "Int" ] ""
@@ -126,22 +102,6 @@ logParseResult s (( t, _, dep ) as r) =
     --             )
     -- in
     r
-
-
-testFromExp : String -> Test
-testFromExp s =
-    test s
-        (\_ ->
-            case Parser.run (ToyParser.expression 0) s of
-                Ok exp ->
-                    exp
-                        |> Typing.fromExp 0 Dict.empty
-                        |> logParseResult s
-                        |> always Expect.pass
-
-                Err e ->
-                    Expect.fail (ToyParser.formatError e)
-        )
 
 
 testEval : String -> List ( String, String ) -> String -> Test
