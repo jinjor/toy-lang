@@ -264,25 +264,21 @@ singleExpression =
 functionTail : Int -> Parser (List (Pos Expression))
 functionTail indent =
     inContext "function tail" <|
-        oneOf
-            [ (delayedCommit spacesWithLF
-                (getCol
-                    |> andThen
-                        (\i ->
-                            if i > indent then
-                                oneOf
-                                    [ delayedCommitMap (::)
-                                        (lazy (\_ -> singleExpression))
-                                        (lazy (\_ -> functionTail indent))
-                                    , succeed []
-                                    ]
-                            else
-                                succeed []
-                        )
-                )
-              )
-            , succeed []
-            ]
+        delayedCommit spacesWithLF
+            (getCol
+                |> andThen
+                    (\i ->
+                        if i > indent then
+                            oneOf
+                                [ delayedCommitMap (::)
+                                    (lazy (\_ -> singleExpression))
+                                    (lazy (\_ -> functionTail indent))
+                                , succeed []
+                                ]
+                        else
+                            succeed []
+                    )
+            )
 
 
 lambda : Parser Expression
@@ -331,7 +327,7 @@ doReturn =
         delayedCommit
             (succeed ()
                 |. keyword "do"
-                |. spacesWithLF
+                |. spacesWithLF1
             )
             (getCol
                 |> andThen
@@ -344,10 +340,14 @@ doReturn =
 doReturnTail : Int -> List (Pos Statement) -> Parser (Pos Expression)
 doReturnTail indent statements =
     oneOf
-        [ succeed (makeLet statements)
-            |. keyword "return"
-            |. spacesWithLF
-            |= lazy (\_ -> expression indent)
+        [ delayedCommit
+            (succeed ()
+                |. keyword "return"
+                |. spacesWithLF1
+            )
+            (succeed (makeLet statements)
+                |= lazy (\_ -> expression indent)
+            )
         , succeed identity
             |. checkIndentLevel indent
             |= (lazy (\_ -> statement indent)
@@ -411,6 +411,11 @@ string =
 spacesWithLF : Parser ()
 spacesWithLF =
     ignore zeroOrMore (\c -> c == ' ' || c == '\n')
+
+
+spacesWithLF1 : Parser ()
+spacesWithLF1 =
+    ignore oneOrMore (\c -> c == ' ' || c == '\n')
 
 
 positioned : Parser a -> Parser (Pos a)

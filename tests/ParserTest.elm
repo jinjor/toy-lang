@@ -19,6 +19,7 @@ suite =
             ]
         , describe "ref"
             [ testParse ref "foo" [ ( "Ref", 1 ), ( "foo", 1 ) ]
+            , testParseFailure ref "return"
             ]
         , describe "lambda"
             [ testParse (expression 1) "\\a->1" [ ( "Int", 1 ) ]
@@ -40,8 +41,10 @@ suite =
             ]
         , describe "do-return"
             [ testParse (expression 1) "do return 1" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "doreturn 1" [ ( "doreturn", 1 ) ]
             , testParse (expression 1) "do a = 1 return a" [ ( "Let", 1 ) ]
             , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Let", 2 ) ]
+            , testParse (expression 1) "do a = 1\n   returns = 1\nreturn\nreturns" [ ( "Let", 2 ) ]
             ]
         , describe "statement"
             [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
