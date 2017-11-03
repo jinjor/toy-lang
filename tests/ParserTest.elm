@@ -38,10 +38,11 @@ suite =
             , testParse (expression 1) "foo does" [ ( "Call", 1 ), ( "foo", 1 ), ( "does", 1 ) ]
             , testParse (expression 1) "does foo" [ ( "Call", 1 ), ( "does", 1 ), ( "foo", 1 ) ]
             ]
-          -- , describe "do-return"
-          --     [ testParse (expression 1) "do a = 1 return a" [ ( "Assignment", 1 ) ]
-          --     , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Assignment", 2 ) ]
-          --     ]
+        , describe "do-return"
+            [ testParse (expression 1) "do return 1" [ ( "Int", 1 ) ]
+            , testParse (expression 1) "do a = 1 return a" [ ( "Let", 1 ) ]
+            , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Let", 2 ) ]
+            ]
         , describe "statement"
             [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]

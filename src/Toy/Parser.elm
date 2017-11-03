@@ -203,9 +203,22 @@ assignment indent =
 identifier : Parser Identifier
 identifier =
     inContext "identifier" <|
-        source <|
-            ignore (Exactly 1) Char.isLower
-                |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+        (lowerCamel
+            |> andThen
+                (\name ->
+                    if name == "return" then
+                        fail "unexpected keyword `return`"
+                    else
+                        succeed name
+                )
+        )
+
+
+lowerCamel : Parser String
+lowerCamel =
+    source <|
+        ignore (Exactly 1) Char.isLower
+            |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
 expression : Int -> Parser (Pos Expression)
@@ -257,9 +270,12 @@ functionTail indent =
                     |> andThen
                         (\i ->
                             if i > indent then
-                                succeed (::)
-                                    |= lazy (\_ -> singleExpression)
-                                    |= lazy (\_ -> functionTail indent)
+                                oneOf
+                                    [ delayedCommitMap (::)
+                                        (lazy (\_ -> singleExpression))
+                                        (lazy (\_ -> functionTail indent))
+                                    , succeed []
+                                    ]
                             else
                                 succeed []
                         )
@@ -315,24 +331,34 @@ doReturn =
         delayedCommit
             (succeed ()
                 |. keyword "do"
-                |. spaces
+                |. spacesWithLF
             )
-            (succeed makeLet
-                |= (getCol
-                        |> andThen
-                            (\i ->
-                                oneOf
-                                    [ delayedCommitMap (::)
-                                        (lazy (\_ -> statement i))
-                                        (lazy (\_ -> statementsUntilReturn i))
-                                    , succeed []
-                                    ]
-                            )
-                   )
-                |. keyword "return"
-                |. spaces
-                |= lazy (\_ -> expression 0)
+            (getCol
+                |> andThen
+                    (\i ->
+                        doReturnTail i []
+                    )
             )
+
+
+doReturnTail : Int -> List (Pos Statement) -> Parser (Pos Expression)
+doReturnTail indent statements =
+    oneOf
+        [ succeed (makeLet statements)
+            |. keyword "return"
+            |. spacesWithLF
+            |= lazy (\_ -> expression indent)
+        , succeed identity
+            |. checkIndentLevel indent
+            |= (lazy (\_ -> statement indent)
+                    |> andThen
+                        (\s ->
+                            succeed identity
+                                |. spacesWithLF
+                                |= doReturnTail indent (statements ++ [ s ])
+                        )
+               )
+        ]
 
 
 makeLet : List (Pos Statement) -> Pos Expression -> Pos Expression
@@ -348,21 +374,6 @@ makeLet statements exp =
 
                 _ ->
                     Debug.crash "not implemented yet"
-
-
-statementsUntilReturn : Int -> Parser (List (Pos Statement))
-statementsUntilReturn indent =
-    inContext "statements until return" <|
-        succeed identity
-            |= oneOf
-                [ succeed []
-                    |. keyword "return"
-                , succeed (::)
-                    |. spaces
-                    |. checkIndentLevel indent
-                    |= lazy (\_ -> statement indent)
-                    |= lazy (\_ -> statementsUntilReturn indent)
-                ]
 
 
 checkIndentLevel : Int -> Parser ()
@@ -400,16 +411,6 @@ string =
 spacesWithLF : Parser ()
 spacesWithLF =
     ignore zeroOrMore (\c -> c == ' ' || c == '\n')
-
-
-spaces : Parser ()
-spaces =
-    ignore zeroOrMore (\c -> c == ' ')
-
-
-spaces1 : Parser ()
-spaces1 =
-    ignore oneOrMore (\c -> c == ' ')
 
 
 positioned : Parser a -> Parser (Pos a)
