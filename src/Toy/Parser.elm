@@ -315,10 +315,7 @@ patterns =
 
 pattern : Parser Pattern
 pattern =
-    inContext "pattern" <|
-        source <|
-            ignore (Exactly 1) Char.isLower
-                |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+    inContext "pattern" lowerCamel
 
 
 ref : Parser Expression
@@ -395,6 +392,24 @@ checkIndentLevel expected =
             )
 
 
+number : Parser Expression
+number =
+    inContext "number" <|
+        succeed IntLiteral
+            |= map toString int
+
+
+string : Parser Expression
+string =
+    inContext "string" <|
+        succeed StringLiteral
+            |. symbol "\""
+            |= (source <|
+                    ignore zeroOrMore (\c -> c /= '"')
+               )
+            |. symbol "\""
+
+
 lowerCamel : Parser String
 lowerCamel =
     camel False
@@ -415,26 +430,6 @@ camel upper =
                 Char.isLower
             )
             |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
-
-
-number : Parser Expression
-number =
-    inContext "number" <|
-        succeed IntLiteral
-            |= oneOf
-                [ map toString int
-                ]
-
-
-string : Parser Expression
-string =
-    inContext "string" <|
-        succeed StringLiteral
-            |. symbol "\""
-            |= (source <|
-                    ignore zeroOrMore (\c -> c /= '"')
-               )
-            |. symbol "\""
 
 
 spaces : Parser ()
