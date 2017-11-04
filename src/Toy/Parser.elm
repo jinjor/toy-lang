@@ -59,6 +59,8 @@ module_ =
     inContext "module" <|
         succeed (Module "Main")
             |= statements 1
+            |. spaces
+            |. end
 
 
 statements : Int -> Parser (List (Pos Statement))
@@ -76,6 +78,8 @@ statements indent =
                                 succeed (::)
                                     |= statement indent
                                     |= statements indent
+                            else if i > indent then
+                                fail "indent error 2"
                             else
                                 succeed []
                         )
@@ -241,7 +245,7 @@ expression : Int -> Parser (Pos Expression)
 expression indent =
     inContext "expression" <|
         succeed makeCall
-            |= lazy (\_ -> singleExpression)
+            |= lazy (\_ -> singleExpression indent)
             |= lazy (\_ -> functionTail indent)
 
 
@@ -259,13 +263,13 @@ makeCall head tail =
                 makeCall (Pos range (Call head x)) xs
 
 
-singleExpression : Parser (Pos Expression)
-singleExpression =
+singleExpression : Int -> Parser (Pos Expression)
+singleExpression indent =
     inContext "single expression" <|
         oneOf
             [ positioned number
             , positioned string
-            , lazy (\_ -> positioned lambda)
+            , lazy (\_ -> positioned (lambda indent))
             , lazy (\_ -> doReturn)
             , positioned ref
             , succeed identity
@@ -287,7 +291,7 @@ functionTail indent =
                         if i > indent then
                             oneOf
                                 [ delayedCommitMap (::)
-                                    (lazy (\_ -> singleExpression))
+                                    (lazy (\_ -> singleExpression indent))
                                     (lazy (\_ -> functionTail indent))
                                 , succeed []
                                 ]
@@ -297,8 +301,8 @@ functionTail indent =
             )
 
 
-lambda : Parser Expression
-lambda =
+lambda : Int -> Parser Expression
+lambda indent =
     inContext "lambda" <|
         succeed Lambda
             |. symbol "\\"
@@ -306,7 +310,7 @@ lambda =
             |. spaces
             |. symbol "->"
             |. spaces
-            |= lazy (\_ -> expression 0)
+            |= lazy (\_ -> expression indent)
 
 
 patterns : Parser Patterns

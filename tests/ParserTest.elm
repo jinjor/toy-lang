@@ -77,7 +77,9 @@ suite =
         , describe "module"
             [ testParse (module_) "a=1\nb=2 " [ ( "Assignment", 2 ) ]
             , testParse (module_) "a:String\na=2 " [ ( "TypeSignature", 1 ), ( "Assignment", 1 ) ]
+            , testParse (module_) "a=\\a -> a\nb=1 " [ ( "Assignment", 2 ) ]
             , testParse (module_) "\n\n\na=1\n\n\n\nb=3\n\n\n\n\n" [ ( "Assignment", 2 ) ]
+            , testParseFailure (module_) "a=b=2"
             ]
         ]
 
