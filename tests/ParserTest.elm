@@ -12,10 +12,16 @@ suite : Test
 suite =
     describe "Parsing"
         [ describe "int"
-            [ testParse number "1" [ ( "Int", 1 ) ]
+            [ testParse intLiteral "1" [ ( "Int", 1 ) ]
             ]
         , describe "string"
-            [ testParse string "\"foo\"" [ ( "foo", 1 ) ]
+            [ testParse stringLiteral "\"foo\"" [ ( "foo", 1 ) ]
+            ]
+        , describe "list"
+            [ testParse (listLiteral 1) "[]" [ ( "List", 1 ) ]
+            , testParse (listLiteral 1) "[ [ ] ]" [ ( "List", 2 ) ]
+            , testParse (listLiteral 1) "[ foo ]" [ ( "List", 1 ), ( "foo", 1 ) ]
+            , testParse (listLiteral 1) "[ foo, bar ]" [ ( "List", 1 ), ( "foo", 1 ), ( "bar", 1 ) ]
             ]
         , describe "ref"
             [ testParse ref "foo" [ ( "Ref", 1 ), ( "foo", 1 ) ]

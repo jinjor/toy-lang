@@ -35,6 +35,7 @@ type alias TypeConstructor =
 type Expression
     = IntLiteral String
     | StringLiteral String
+    | ListLiteral (List (Pos Expression))
     | Ref Identifier
     | Call (Pos Expression) (Pos Expression)
     | Lambda Patterns (Pos Expression)
@@ -254,8 +255,9 @@ singleExpression : Int -> Parser (Pos Expression)
 singleExpression indent =
     inContext "single expression" <|
         oneOf
-            [ positioned number
-            , positioned string
+            [ positioned intLiteral
+            , positioned stringLiteral
+            , positioned (listLiteral indent)
             , lazy (\_ -> positioned (lambda indent))
             , lazy (\_ -> doReturn)
             , positioned ref
@@ -392,22 +394,43 @@ checkIndentLevel expected =
             )
 
 
-number : Parser Expression
-number =
-    inContext "number" <|
+intLiteral : Parser Expression
+intLiteral =
+    inContext "int literal" <|
         succeed IntLiteral
             |= map toString int
 
 
-string : Parser Expression
-string =
-    inContext "string" <|
+stringLiteral : Parser Expression
+stringLiteral =
+    inContext "string literal" <|
         succeed StringLiteral
             |. symbol "\""
             |= (source <|
                     ignore zeroOrMore (\c -> c /= '"')
                )
             |. symbol "\""
+
+
+listLiteral : Int -> Parser Expression
+listLiteral indent =
+    inContext "list literal" <|
+        succeed ListLiteral
+            |. symbol "["
+            |. spaces
+            |= listLiteralTail indent
+
+
+listLiteralTail : Int -> Parser (List (Pos Expression))
+listLiteralTail indent =
+    oneOf
+        [ succeed []
+            |. symbol "]"
+        , succeed (::)
+            |= expression indent
+            |. spaces
+            |= lazy (\_ -> listLiteralTail indent)
+        ]
 
 
 lowerCamel : Parser String

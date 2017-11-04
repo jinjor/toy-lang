@@ -104,6 +104,9 @@ fromExp n typeVars exp =
         P.StringLiteral _ ->
             ( string, n, Dict.empty )
 
+        P.ListLiteral _ ->
+            Debug.crash "not implemented yet"
+
         P.Ref a ->
             typeVars
                 |> Dict.get a
