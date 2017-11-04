@@ -190,19 +190,13 @@ typeArguments indent =
 
 typeConstructor : Parser String
 typeConstructor =
-    inContext "type constructor" <|
-        source <|
-            ignore (Exactly 1) Char.isUpper
-                |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+    inContext "type constructor" upperCamel
 
 
 typeVariable : Parser TypeExp
 typeVariable =
     inContext "type variable" <|
-        map TypeVar <|
-            source <|
-                ignore (Exactly 1) Char.isLower
-                    |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
+        map TypeVar lowerCamel
 
 
 assignment : Int -> Parser Statement
@@ -232,13 +226,6 @@ identifier =
                         succeed name
                 )
         )
-
-
-lowerCamel : Parser String
-lowerCamel =
-    source <|
-        ignore (Exactly 1) Char.isLower
-            |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
 expression : Int -> Parser (Pos Expression)
@@ -406,6 +393,28 @@ checkIndentLevel expected =
                 else
                     fail "indent error"
             )
+
+
+lowerCamel : Parser String
+lowerCamel =
+    camel False
+
+
+upperCamel : Parser String
+upperCamel =
+    camel True
+
+
+camel : Bool -> Parser String
+camel upper =
+    source <|
+        ignore (Exactly 1)
+            (if upper then
+                Char.isUpper
+             else
+                Char.isLower
+            )
+            |. ignore zeroOrMore (\c -> Char.isLower c || Char.isUpper c)
 
 
 number : Parser Expression
