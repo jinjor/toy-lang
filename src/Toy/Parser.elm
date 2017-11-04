@@ -101,20 +101,21 @@ statement indent =
 typeSignature : Parser Statement
 typeSignature =
     inContext "type signature" <|
-        delayedCommitMap (\id t -> TypeSignature id.content t)
-            (succeed identity
-                |= positioned identifier
-                |. spaces
-            )
-            (getCol
-                |> andThen
-                    (\indent ->
-                        succeed identity
+        (getCol
+            |> andThen
+                (\indent ->
+                    delayedCommitMap (\id t -> TypeSignature id.content t)
+                        (succeed identity
+                            |= positioned identifier
+                            |. spaces
                             |. symbol ":"
+                        )
+                        (succeed identity
                             |. spaces
                             |= positioned (typeExp indent)
-                    )
-            )
+                        )
+                )
+        )
 
 
 typeExp : Int -> Parser TypeExp
@@ -164,11 +165,22 @@ typeArguments : Int -> Parser (List TypeExp)
 typeArguments indent =
     inContext "type arguments" <|
         oneOf
-            [ succeed (::)
-                |= lazy (\_ -> singleTypeExp indent)
-                |. spaces
-                |= lazy (\_ -> typeArguments indent)
-            , succeed []
+            [ succeed []
+                |. end
+            , getCol
+                |> andThen
+                    (\i ->
+                        if i > indent then
+                            oneOf
+                                [ succeed (::)
+                                    |= lazy (\_ -> singleTypeExp indent)
+                                    |. spaces
+                                    |= lazy (\_ -> typeArguments indent)
+                                , succeed []
+                                ]
+                        else
+                            succeed []
+                    )
             ]
 
 
@@ -458,7 +470,7 @@ formatProblem problem =
             "not a float"
 
         BadRepeat ->
-            "internal error"
+            "internal error (bad repeat)"
 
         ExpectingEnd ->
             "expecting end"

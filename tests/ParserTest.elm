@@ -46,6 +46,21 @@ suite =
             , testParse (expression 1) "do a = 1\n   b = 1\nreturn\nb" [ ( "Let", 2 ) ]
             , testParse (expression 1) "do a = 1\n   returns = 1\nreturn\nreturns" [ ( "Let", 2 ) ]
             ]
+        , describe "type value"
+            [ testParse (typeValue 1) "List Int" [ ( "List", 1 ), ( "Int", 1 ) ]
+            , testParse (typeValue 1) "List\n Int" [ ( "List", 1 ), ( "Int", 1 ) ]
+            , testParse (typeValue 1) "List\n foo" [ ( "List", 1 ), ( "foo", 1 ) ]
+            , testParse (typeValue 1) "List\n foo\n bar" [ ( "List", 1 ), ( "foo", 1 ), ( "bar", 1 ) ]
+            ]
+        , describe "type expression"
+            [ testParse (typeExp 1) "foo -> bar" [ ( "foo", 1 ), ( "bar", 1 ) ]
+            , testParse (typeExp 1) "foo\n ->\n bar" [ ( "foo", 1 ), ( "bar", 1 ) ]
+            , testParse (typeExp 1) "List\n foo\n ->\n bar" [ ( "List", 1 ), ( "foo", 1 ), ( "bar", 1 ) ]
+            ]
+        , describe "type signature"
+            [ testParse (typeSignature) "a\n :\n Dict\n foo" [ ( "foo", 1 ) ]
+            , testParse (typeSignature) "a\n :\n Dict\n foo\n bar\n ->\n baz" [ ( "foo", 1 ), ( "bar", 1 ), ( "baz", 1 ) ]
+            ]
         , describe "statement"
             [ testParse (statement 1) "a:Int" [ ( "TypeSignature", 1 ) ]
             , testParse (statement 1) "a : Int " [ ( "TypeSignature", 1 ) ]
