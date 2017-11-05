@@ -45,6 +45,9 @@ translateExpression exp =
         P.StringLiteral s ->
             JsString s
 
+        P.ListLiteral _ ->
+            Debug.crash "not implemented yet"
+
         P.Ref id ->
             JsRef id
 

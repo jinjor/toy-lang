@@ -418,19 +418,34 @@ listLiteral indent =
         succeed ListLiteral
             |. symbol "["
             |. spaces
-            |= listLiteralTail indent
-
-
-listLiteralTail : Int -> Parser (List (Pos Expression))
-listLiteralTail indent =
-    oneOf
-        [ succeed []
-            |. symbol "]"
-        , succeed (::)
-            |= expression indent
+            |= listItems indent []
             |. spaces
-            |= lazy (\_ -> listLiteralTail indent)
-        ]
+            |. symbol "]"
+
+
+listItems : Int -> List (Pos Expression) -> Parser (List (Pos Expression))
+listItems indent list =
+    let
+        itemParser =
+            if list == [] then
+                expression indent
+            else
+                nextItem indent
+    in
+        oneOf
+            [ itemParser
+                |> andThen (\exp -> listItems indent (exp :: list))
+            , succeed (List.reverse list)
+            ]
+
+
+nextItem : Int -> Parser (Pos Expression)
+nextItem indent =
+    delayedCommit spaces <|
+        succeed identity
+            |. symbol ","
+            |. spaces
+            |= expression indent
 
 
 lowerCamel : Parser String
