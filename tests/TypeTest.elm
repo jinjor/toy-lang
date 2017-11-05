@@ -20,66 +20,16 @@ import Parser
 --             , testEval "\\a -> b" [] ""
 --             , testEval "\\a -> b" [ "b" => "Int" ] ""
 --             , testEval "\\a -> a" [] ""
---             , testEval "(\\a -> \"\") 1" [] "String"
---             , testEval "(\\a -> a) 1" [] "Int"
---             , testEval "(\\a -> f a)" [ "f" => "Int -> String" ] "(Int -> String)"
---             , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] "Int"
 --             , testEval "if a b c" [ "if" => "Bool -> a -> a -> a" ] ""
---             , testEval "if 0 \"\" \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
---             , testEval "if 1 0 \"\"" [ "if" => "Int -> a -> a -> a" ] "Mismatch"
---             , testEval "if 2 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
---             , testEval "if 3 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
---             , testEval "if 4 \"\" a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
---             , testEval "if 5 \"\" a" [ "if" => "Int -> a -> a -> a" ] "String"
---             , testEval "if 6 a \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
---             , testEval "a 1" [ "a" => "Int" ] "Argument"
 --             , testEval "a 1" [ "a" => "a" ] ""
---             , testEval "a 1" [ "a" => "Int -> String" ] "String"
---             , testEval "a 1" [ "a" => "String -> Int" ] "Mismatch"
---             , testEval "a 1" [ "a" => "a -> a" ] "Int"
 --             , testEval "do a = (\\a -> a)\n return f (a 1) (a \"\")" [] ""
---             , testEval "(\\a -> a 1) (\\a -> a)" [] "Int"
 --             , testEval "(\\a -> f (a 1)) (\\a -> a)" [] ""
 --             , testEval "(\\a -> f (a 1) (a \"\")) (\\a -> a)" [] ""
 --             , testEval "(\\a -> f (a 1) (a \"\"))" [] ""
---             , testEval "f (a 1) (a \"\")" [ "a" => "a -> a", "f" => "b -> c -> b -> c" ] "(Int -> String)"
 --             , testEval "do\na=1\nb=2\nreturn add a b" [] ""
---             , testEval "do\na=1\na=\"\"\nreturn a" [] "String"
---             , testEval "do\na=1\nb=a\nb=b\nreturn b" [] "Int"
 --             , testEval "do\nb=1\nreturn append b" [ "append" => "String -> String" ] ""
 --             , testEval "(\\b -> append b) 1" [ "append" => "String -> String" ] ""
 --             , testEval "do\nb=1\nc=\"\"\nreturn plus b c" [ "plus" => "a -> a -> a" ] ""
---             , testEval "map toString"
---                 [ "map" => "(a -> b) -> a -> b"
---                 , "toString" => "Int -> String"
---                 ]
---                 "(Int -> String)"
---             , testEval "map 1"
---                 [ "map" => "(a -> b) -> a -> b"
---                 ]
---                 "Few"
---             , testEval "map a"
---                 [ "map" => "(a -> b) -> a -> b"
---                 , "a" => "Int -> String -> Bool"
---                 ]
---                 "(Int -> (String -> Bool))"
---             , testEval "do\nf = \\a -> a\nreturn g (f 1) (f \"\")"
---                 [ "g" => "Int -> String -> Bool" ]
---                 "Bool"
---             , testEval "a 1" [ "a" => "a -> A a" ] "A Int"
---             , testEval "map toString list"
---                 [ "map" => "(a -> b) -> List a -> List b"
---                 , "toString" => "Int -> String"
---                 , "list" => "List Int"
---                 ]
---                 "List String"
---             , testEval "map toString (cons 1 nil)"
---                 [ "map" => "(a -> b) -> List a -> List b"
---                 , "toString" => "Int -> String"
---                 , "cons" => "a -> List a -> List a"
---                 , "nil" => "List a"
---                 ]
---                 "List String"
 --             ]
 --         ]
 
@@ -88,60 +38,66 @@ suite : Test
 suite =
     describe "Typing"
         [ describe "eval"
-            [ testEval "a" [ "a" => "Int" ] "Int"
-            , testEval "f" [ "f" => "Int -> String" ] "(Int -> String)"
-            , testEval "a 1" [ "a" => "Int" ] "Argument"
-            , testEval "a 1" [ "a" => "Int -> String" ] "String"
-            , testEval "a 1" [ "a" => "String -> Int" ] "Mismatch"
-            , testEval "a 1" [ "a" => "a -> a" ] "Int"
-            , testEval "if 0 \"\" \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 1 0 \"\"" [ "if" => "Int -> a -> a -> a" ] "Mismatch"
-            , testEval "if 2 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "String" ] "String"
-            , testEval "if 3 a \"\"" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
-            , testEval "if 4 \"\" a" [ "if" => "Int -> a -> a -> a", "a" => "Int" ] "Mismatch"
-            , testEval "if 5 \"\" a" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "if 6 a \"\"" [ "if" => "Int -> a -> a -> a" ] "String"
-            , testEval "f (a 1) (a \"\")" [ "a" => "a -> a", "f" => "b -> c -> b -> c" ] "(Int -> String)"
-            , testEval "(\\a -> \"\") 1" [] "String"
-            , testEval "(\\a -> a) 1" [] "Int"
-            , testEval "(\\a -> a) 1" [ "a" => "String" ] "Int"
-            , testEval "(\\a -> f a)" [ "f" => "Int -> String" ] "(Int -> String)"
-            , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] "Int"
-            , testEval "(\\a -> a 1) (\\a -> a)" [] "Int"
-            , testEval "(\\a -> f (a 1) (a \"\"))" [] ""
-            , testEval "do\na=1\na=\"\"\nreturn a" [] "String"
-            , testEval "do\na=1\nb=a\nb=b\nreturn b" [] "Int"
+            [ testEval "a" [ "a" => "Int" ] (Ok "Int")
+            , testEval "f" [ "f" => "Int -> String" ] (Ok "(Int -> String)")
+            , testEval "a 1" [ "a" => "Int" ] (Err "Argument")
+            , testEval "a 1" [ "a" => "Int -> String" ] (Ok "String")
+            , testEval "a 1" [ "a" => "Int -> String -> Bool" ] (Ok "(String -> Bool)")
+            , testEval "a 1" [ "a" => "String -> Int" ] (Err "Mismatch")
+            , testEval "a 1" [ "a" => "a -> a" ] (Ok "Int")
+            , testEval "a 1" [ "a" => "a -> a -> a" ] (Ok "(Int -> Int)")
+            , testEval "f \"\" \"\"" [ "f" => "a -> a -> a" ] (Ok "String")
+            , testEval "f 0 \"\"" [ "f" => "a -> a -> a" ] (Err "Mismatch")
+            , testEval "f a \"\"" [ "f" => "a -> a -> a", "a" => "String" ] (Ok "String")
+            , testEval "f a \"\"" [ "f" => "a -> a -> a", "a" => "Int" ] (Err "Mismatch")
+            , testEval "f \"\" a" [ "f" => "a -> a -> a", "a" => "Int" ] (Err "Mismatch")
+              -- Ok?
+            , testEval "f \"\" a" [ "f" => "a -> a -> a" ] (Ok "String")
+              -- Ok?
+            , testEval "f a \"\"" [ "f" => "a -> a -> a" ] (Ok "String")
+            , testEval "f a" [ "f" => "a -> a", "a" => "Int -> String" ] (Ok "(Int -> String)")
+            , testEval "f a 1" [ "f" => "a -> a", "a" => "Int -> String" ] (Ok "String")
+            , testEval "f (a 1) (a \"\")" [ "a" => "a -> a", "f" => "b -> c -> b -> c" ] (Ok "(Int -> String)")
+            , testEval "(\\a -> \"\") 1" [] (Ok "String")
+            , testEval "(\\a -> a) 1" [] (Ok "Int")
+            , testEval "(\\a -> a) 1" [ "a" => "String" ] (Ok "Int")
+            , testEval "(\\a -> f a)" [ "f" => "Int -> String" ] (Ok "(Int -> String)")
+            , testEval "(\\a -> a) (f 1)" [ "f" => "Int -> Int" ] (Ok "Int")
+            , testEval "(\\a -> a 1) (\\a -> a)" [] (Ok "Int")
+            , testEval "(\\a -> f (a 1) (a \"\")) (\\a -> a)" [ "f" => "b -> c -> b -> c" ] (Ok "(Int -> String)")
+            , testEval "do\na=1\na=\"\"\nreturn a" [] (Ok "String")
+            , testEval "do\na=1\nb=a\nb=b\nreturn b" [] (Ok "Int")
             , testEval "map toString"
                 [ "map" => "(a -> b) -> a -> b"
                 , "toString" => "Int -> String"
                 ]
-                "(Int -> String)"
+                (Ok "(Int -> String)")
             , testEval "map 1"
                 [ "map" => "(a -> b) -> a -> b"
                 ]
-                "Few"
+                (Err "Few")
             , testEval "map a"
                 [ "map" => "(a -> b) -> a -> b"
                 , "a" => "Int -> String -> Bool"
                 ]
-                "(Int -> (String -> Bool))"
+                (Ok "(Int -> (String -> Bool))")
             , testEval "do\nf = \\a -> a\nreturn g (f 1) (f \"\")"
                 [ "g" => "Int -> String -> Bool" ]
-                "Bool"
-            , testEval "a 1" [ "a" => "a -> A a" ] "A Int"
+                (Ok "Bool")
+            , testEval "a 1" [ "a" => "a -> A a" ] (Ok "A Int")
             , testEval "map toString list"
                 [ "map" => "(a -> b) -> List a -> List b"
                 , "toString" => "Int -> String"
                 , "list" => "List Int"
                 ]
-                "List String"
+                (Ok "List String")
             , testEval "map toString (cons 1 nil)"
                 [ "map" => "(a -> b) -> List a -> List b"
                 , "toString" => "Int -> String"
                 , "cons" => "a -> List a -> List a"
                 , "nil" => "List a"
                 ]
-                "List String"
+                (Ok "List String")
             ]
         ]
 
@@ -166,7 +122,7 @@ logParseResult s (( t, _, dep ) as r) =
     r
 
 
-testEval : String -> List ( String, String ) -> String -> Test
+testEval : String -> List ( String, String ) -> Result String String -> Test
 testEval s envSource_ expected =
     let
         envSource =
@@ -222,10 +178,12 @@ testEval s envSource_ expected =
                                     --                    )
                                     --             )
                                     -- in
-                                    if expected == "" then
-                                        Expect.pass
-                                    else
-                                        Expect.equal expected (formatType t)
+                                    case expected of
+                                        Ok expected ->
+                                            Expect.equal expected (formatType t)
+
+                                        _ ->
+                                            Expect.fail "unexpectedy failed"
 
                                 Err ( range, e ) ->
                                     -- let
@@ -235,12 +193,14 @@ testEval s envSource_ expected =
                                     --     _ =
                                     --         Debug.log ("[err]     " ++ input) (toString e ++ " at " ++ Formatter.formatRange range)
                                     -- in
-                                    if expected == "" then
-                                        Expect.pass
-                                    else
-                                        toString e
-                                            |> String.contains expected
-                                            |> Expect.true (toString e ++ " should contain " ++ expected)
+                                    case expected of
+                                        Ok _ ->
+                                            Expect.fail "unexpectedy failed"
+
+                                        Err expected ->
+                                            toString e
+                                                |> String.contains expected
+                                                |> Expect.true (toString e ++ " should contain " ++ expected)
 
                     Err e ->
                         Expect.fail (ToyParser.formatError e)
