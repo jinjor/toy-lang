@@ -183,6 +183,20 @@ lookup env t =
             t
 
 
+evaluateAnnotatedType : Env -> Type -> Type -> Result Error ( Type, Env )
+evaluateAnnotatedType env annotation t =
+    evaluate env t
+        |> Result.andThen
+            (\( t, env ) ->
+                match env annotation t
+                    |> Result.mapError ((,) P.mockRange)
+                    |> Result.map
+                        (\env ->
+                            ( t, env )
+                        )
+            )
+
+
 evaluate : Env -> Type -> Result Error ( Type, Env )
 evaluate env t =
     case debugEval env t of
