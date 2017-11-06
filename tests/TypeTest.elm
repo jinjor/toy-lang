@@ -8,6 +8,7 @@ import Toy.Typing as Typing exposing (..)
 import Toy.Parser as ToyParser
 import Toy.Checker as Checker
 import Toy.Formatter as Formatter exposing (formatType)
+import Toy.Debug as ToyDebug
 import Dict exposing (Dict)
 import Parser
 
@@ -46,6 +47,10 @@ suite =
             , testEval "a 1" [ "a" => "String -> Int" ] (Err "Mismatch")
             , testEval "a 1" [ "a" => "a -> a" ] (Ok "Int")
             , testEval "a 1" [ "a" => "a -> a -> a" ] (Ok "(Int -> Int)")
+            , testEval "a (\\a -> a)" [ "a" => "Int" ] (Err "Many")
+            , testEval "a (\\a -> a)" [ "a" => "Int -> String" ] (Err "Mismatch")
+            , testEval "a (\\a -> a)" [ "a" => "a -> String" ] (Ok "String")
+            , testEval "a b" [ "a" => "(a -> a) -> (a -> a)", "b" => "Int -> Int" ] (Ok "(Int -> Int)")
             , testEval "f \"\" \"\"" [ "f" => "a -> a -> a" ] (Ok "String")
             , testEval "f 0 \"\"" [ "f" => "a -> a -> a" ] (Err "Mismatch")
             , testEval "f a \"\"" [ "f" => "a -> a -> a", "a" => "String" ] (Ok "String")
@@ -106,20 +111,26 @@ suite =
     (,)
 
 
+(/>) a b =
+    b
+infixl 1 />
+
+
 logParseResult : String -> ( Type, Int, Dependency ) -> ( Type, Int, Dependency )
 logParseResult s (( t, _, dep ) as r) =
-    -- let
-    --     _ =
-    --         Debug.log ("[parsed]  " ++ s)
-    --             (formatType t
-    --                 ++ (if Dict.isEmpty dep then
-    --                         ""
-    --                     else
-    --                         " with " ++ formatDict identity toString dep
-    --                    )
-    --             )
-    -- in
-    r
+    Debug.log ("[parsed]  " ++ s)
+        (formatTypeWithDependency t dep)
+        /> r
+
+
+formatTypeWithDependency : Type -> Dependency -> String
+formatTypeWithDependency t dep =
+    formatType t
+        ++ (if Dict.isEmpty dep then
+                ""
+            else
+                " with " ++ ToyDebug.formatDict identity (Tuple.second >> toString) dep
+           )
 
 
 testEval : String -> List ( String, String ) -> Result String String -> Test
@@ -129,7 +140,7 @@ testEval s envSource_ expected =
             Dict.fromList envSource_
 
         input =
-            (s ++ " with " ++ formatDict identity identity envSource)
+            (s ++ " with " ++ ToyDebug.formatDict identity identity envSource)
 
         parseResult =
             Parser.run (ToyParser.expression 0) s
@@ -164,47 +175,44 @@ testEval s envSource_ expected =
                         in
                             case evaluate env t of
                                 Ok ( t, env ) ->
-                                    -- let
-                                    --     _ =
-                                    --         Debug.log "" ""
-                                    --
-                                    --     _ =
-                                    --         Debug.log ("[ok]      " ++ input)
-                                    --             (formatType t
-                                    --                 ++ (if Dict.isEmpty env then
-                                    --                         ""
-                                    --                     else
-                                    --                         " with " ++ formatDict toString formatType env
-                                    --                    )
-                                    --             )
-                                    -- in
-                                    case expected of
-                                        Ok expected ->
-                                            Expect.equal expected (formatType t)
+                                    ()
+                                        /> Debug.log "" ""
+                                        /> Debug.log ("[ok]      " ++ input) (formatEvalResult t env)
+                                        /> case expected of
+                                            Ok expected ->
+                                                Expect.equal expected (formatType t)
 
-                                        _ ->
-                                            Expect.fail "unexpectedy failed"
+                                            _ ->
+                                                Expect.fail "unexpectedy failed"
 
                                 Err ( range, e ) ->
-                                    -- let
-                                    --     _ =
-                                    --         Debug.log "" ""
-                                    --
-                                    --     _ =
-                                    --         Debug.log ("[err]     " ++ input) (toString e ++ " at " ++ Formatter.formatRange range)
-                                    -- in
-                                    case expected of
-                                        Ok _ ->
-                                            Expect.fail "unexpectedy failed"
+                                    ()
+                                        /> Debug.log "" ""
+                                        /> Debug.log
+                                            ("[err]     " ++ input)
+                                            (toString e ++ " at " ++ Formatter.formatRange range)
+                                        /> case expected of
+                                            Ok _ ->
+                                                Expect.fail "unexpectedy failed"
 
-                                        Err expected ->
-                                            toString e
-                                                |> String.contains expected
-                                                |> Expect.true (toString e ++ " should contain " ++ expected)
+                                            Err expected ->
+                                                toString e
+                                                    |> String.contains expected
+                                                    |> Expect.true (toString e ++ " should contain " ++ expected)
 
                     Err e ->
                         Expect.fail (ToyParser.formatError e)
             )
+
+
+formatEvalResult : Type -> Env -> String
+formatEvalResult t env =
+    formatType t
+        ++ (if Dict.isEmpty env then
+                ""
+            else
+                " with " ++ ToyDebug.formatDict toString formatType env
+           )
 
 
 parseEnv : Dict String String -> Result Parser.Error (Dict String ToyParser.TypeExp)

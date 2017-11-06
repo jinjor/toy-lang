@@ -4,6 +4,7 @@ import Toy.Parser as P
 import Toy.Position exposing (..)
 import Toy.Type exposing (..)
 import Toy.Error exposing (..)
+import Toy.Debug as ToyDebug
 import Dict exposing (Dict)
 
 
@@ -148,7 +149,7 @@ debugEval env t =
     -- let
     --     _ =
     --         Debug.log "eval" <|
-    --             formatDict toString formatType env
+    --             ToyDebug.formatDict toString formatType env
     --                 ++ " "
     --                 ++ formatType t
     -- in
@@ -304,17 +305,3 @@ matchTypeArgs env first second =
 
         ( _, [] ) ->
             Err TooFewTypeArguments
-
-
-formatDict : (comparable -> String) -> (b -> String) -> Dict comparable b -> String
-formatDict formatKey formatValue dict =
-    "{ "
-        ++ (dict
-                |> Dict.toList
-                |> List.map
-                    (\( key, value ) ->
-                        formatKey key ++ " => " ++ formatValue value
-                    )
-                |> String.join ", "
-           )
-        ++ " }"
