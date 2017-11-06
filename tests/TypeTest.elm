@@ -67,6 +67,7 @@ suite =
             , testEval "a (\\a -> a)" [ "a" => "Int -> String" ] (Err "Mismatch")
             , testEval "a (\\a -> a)" [ "a" => "a -> String" ] (Ok "String")
             , testEval "a b" [ "a" => "(a -> a) -> (a -> a)", "b" => "Int -> Int" ] (Ok "(Int -> Int)")
+            , testEval "a b" [ "a" => "(a -> b) -> b", "b" => "Int -> String -> Bool" ] (Ok "(String -> Bool)")
             , testEval "f \"\" \"\"" [ "f" => "a -> a -> a" ] (Ok "String")
             , testEval "f 0 \"\"" [ "f" => "a -> a -> a" ] (Err "Mismatch")
             , testEval "f a \"\"" [ "f" => "a -> a -> a", "a" => "String" ] (Ok "String")
