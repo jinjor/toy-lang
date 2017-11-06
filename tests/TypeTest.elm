@@ -38,7 +38,23 @@ import Parser
 suite : Test
 suite =
     describe "Typing"
-        [ describe "eval"
+        [ describe "match"
+            [ testMatch "Int" "Int" (Ok 0)
+            , testMatch "String" "Int" (Err "Mismatch")
+            , testMatch "a" "Int" (Ok 1)
+            , testMatch "Int" "a" (Ok 1)
+            , testMatch "List Int" "List Int" (Ok 0)
+            , testMatch "List Int" "List Bool" (Err "Mismatch")
+            , testMatch "List a" "List Bool" (Ok 1)
+            , testMatch "Int -> String" "Int -> String" (Ok 0)
+            , testMatch "Int -> String" "Int" (Err "Few")
+            , testMatch "Int" "Int -> String" (Err "Mismatch")
+            , testMatch "a" "Int -> String" (Ok 1)
+            , testMatch "a -> b" "Int -> String" (Ok 2)
+            , testMatch "a -> a" "Int -> Int" (Ok 1)
+              -- , testMatch "a -> a" "Int -> String" (Err "Mismatch")
+            ]
+        , describe "eval"
             [ testEval "a" [ "a" => "Int" ] (Ok "Int")
             , testEval "f" [ "f" => "Int -> String" ] (Ok "(Int -> String)")
             , testEval "a 1" [ "a" => "Int" ] (Err "Argument")
@@ -116,6 +132,47 @@ suite =
 infixl 1 />
 
 
+testMatch : String -> String -> Result String Int -> Test
+testMatch left right expected =
+    test (left ++ " <== " ++ right)
+        (\_ ->
+            case ( Parser.run (ToyParser.typeExp 1) left, Parser.run (ToyParser.typeExp 1) right ) of
+                ( Ok left, Ok right ) ->
+                    let
+                        ( leftType, st ) =
+                            Typing.fromTypeExp
+                                (Typing.initFromTypeExpState 0)
+                                left
+
+                        ( rightType, _ ) =
+                            Typing.fromTypeExp
+                                (Typing.initFromTypeExpState st.n)
+                                right
+                    in
+                        case match Dict.empty leftType rightType of
+                            Ok env ->
+                                case expected of
+                                    Ok i ->
+                                        Expect.equal i (Dict.size env)
+
+                                    Err e ->
+                                        Expect.fail ("unexpectedly succeeded: " ++ toString e)
+
+                            Err e ->
+                                case expected of
+                                    Ok _ ->
+                                        Expect.fail ("unexpectedly failed: " ++ toString e)
+
+                                    Err s ->
+                                        toString e
+                                            |> String.contains s
+                                            |> Expect.true (toString e ++ " should contain " ++ s)
+
+                e ->
+                    Expect.fail (toString e)
+        )
+
+
 logParseResult : String -> ( Type, Int, Dependency ) -> ( Type, Int, Dependency )
 logParseResult s (( t, _, dep ) as r) =
     Debug.log ("[parsed]  " ++ s)
@@ -143,7 +200,7 @@ testEval s envSource_ expected =
             (s ++ " with " ++ ToyDebug.formatDict identity identity envSource)
 
         parseResult =
-            Parser.run (ToyParser.expression 0) s
+            Parser.run (ToyParser.expression 1) s
                 |> Result.andThen
                     (\exp ->
                         parseEnv envSource
