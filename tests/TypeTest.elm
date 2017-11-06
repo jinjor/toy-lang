@@ -1,7 +1,6 @@
 module TypeTest exposing (..)
 
 import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Toy.Type exposing (..)
 import Toy.Typing as Typing exposing (..)
