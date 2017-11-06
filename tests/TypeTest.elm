@@ -52,6 +52,7 @@ suite =
             , testMatch "Dict a String" "Dict Int String" (Ok 1)
             , testMatch "Dict Int a" "Dict Int String" (Ok 1)
             , testMatch "Dict a a" "Dict Int Int" (Ok 1)
+            , testMatch "Dict a a" "Dict Int String" (Err "Mismatch")
             , testMatch "Int -> String" "Int -> String" (Ok 0)
             , testMatch "Int -> String" "Int" (Err "Few")
               -- , testMatch "Int -> String" "Int -> String -> Bool" (Err "Many")
@@ -60,7 +61,7 @@ suite =
             , testMatch "Int -> a" "Int -> String -> Bool" (Ok 1)
             , testMatch "a -> b" "Int -> String" (Ok 2)
             , testMatch "a -> a" "Int -> Int" (Ok 1)
-              -- , testMatch "a -> a" "Int -> String" (Err "Mismatch")
+            , testMatch "a -> a" "Int -> String" (Err "Mismatch")
             ]
         , describe "eval"
             [ testEval "a" [ "a" => "Int" ] (Ok "Int")

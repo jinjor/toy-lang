@@ -277,7 +277,7 @@ match env first second =
             match env a1 b1
                 |> Result.andThen
                     (\env ->
-                        match env a2 b2
+                        match env (assignEnv env a2) b2
                     )
 
         ( TypeArrow a1 a2, _ ) ->
@@ -297,7 +297,7 @@ matchTypeArgs env first second =
             match env x y
                 |> Result.andThen
                     (\env ->
-                        matchTypeArgs env xs ys
+                        matchTypeArgs env (List.map (assignEnv env) xs) ys
                     )
 
         ( [], _ ) ->
