@@ -146,15 +146,20 @@ singleTypeExp : Int -> Parser TypeExp
 singleTypeExp indent =
     inContext "single type expression" <|
         oneOf
-            [ succeed identity
-                |. symbol "("
-                |. spaces
-                |= lazy (\_ -> typeExp indent)
-                |. spaces
-                |. symbol ")"
+            [ lazy (\_ -> typeExpWithParens indent)
             , lazy (\_ -> typeValue indent)
             , typeVariable
             ]
+
+
+typeExpWithParens : Int -> Parser TypeExp
+typeExpWithParens indent =
+    succeed identity
+        |. symbol "("
+        |. spaces
+        |= lazy (\_ -> typeExp indent)
+        |. spaces
+        |. symbol ")"
 
 
 typeValue : Int -> Parser TypeExp
@@ -178,7 +183,11 @@ typeArguments indent =
                         if i > indent then
                             oneOf
                                 [ succeed (::)
-                                    |= lazy (\_ -> singleTypeExp indent)
+                                    |= oneOf
+                                        [ lazy (\_ -> typeExpWithParens indent)
+                                        , map (\c -> TypeValue c []) typeConstructor
+                                        , typeVariable
+                                        ]
                                     |. spaces
                                     |= lazy (\_ -> typeArguments indent)
                                 , succeed []

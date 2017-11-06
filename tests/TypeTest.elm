@@ -51,14 +51,14 @@ suite =
             , testMatch "Dict Int String" "Dict Bool String" (Err "Mismatch")
             , testMatch "Dict a String" "Dict Int String" (Ok 1)
             , testMatch "Dict Int a" "Dict Int String" (Ok 1)
-              -- , testMatch "Dict a a" "Dict Int Int" (Ok 1)
+            , testMatch "Dict a a" "Dict Int Int" (Ok 1)
             , testMatch "Int -> String" "Int -> String" (Ok 0)
             , testMatch "Int -> String" "Int" (Err "Few")
             , testMatch "Int" "Int -> String" (Err "Mismatch")
             , testMatch "a" "Int -> String" (Ok 1)
             , testMatch "a -> b" "Int -> String" (Ok 2)
             , testMatch "a -> a" "Int -> Int" (Ok 1)
-              -- , testMatch "a -> a" "Int -> String" (Err "Mismatch")
+            , testMatch "a -> a" "Int -> String" (Err "Mismatch")
             ]
         , describe "eval"
             [ testEval "a" [ "a" => "Int" ] (Ok "Int")
@@ -163,7 +163,7 @@ testMatch left right expected =
                                         Expect.equal i (Dict.size env)
 
                                     Err e ->
-                                        Expect.fail ("unexpectedly succeeded: " ++ toString e)
+                                        Expect.fail ("unexpectedly succeeded: " ++ toString env)
 
                             Err e ->
                                 case expected of
