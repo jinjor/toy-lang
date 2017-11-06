@@ -289,7 +289,7 @@ match env first second =
 
 matchTypeArgs : Env -> List Type -> List Type -> Result ErrorType Env
 matchTypeArgs env first second =
-    case Debug.log "matchTypeArgs" ( first, second ) of
+    case ( first, second ) of
         ( [], [] ) ->
             Ok env
 
