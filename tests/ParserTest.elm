@@ -57,6 +57,11 @@ suite =
             , testParse (typeValue 1) "List\n Int" [ ( "List", 1 ), ( "Int", 1 ) ]
             , testParse (typeValue 1) "List\n foo" [ ( "List", 1 ), ( "foo", 1 ) ]
             , testParse (typeValue 1) "List\n foo\n bar" [ ( "List", 1 ), ( "foo", 1 ), ( "bar", 1 ) ]
+            , testParse (typeValue 1) "Dict\n Int\n String" [ ( "Dict", 1 ), ( "\"Int\" []", 1 ), ( "String", 1 ) ]
+            , testParse (typeValue 1) "Dict\n Int\n foo" [ ( "Dict", 1 ), ( "\"Int\" []", 1 ), ( "foo", 1 ) ]
+            , testParse (typeValue 1) "Dict\n foo\n Int" [ ( "Dict", 1 ), ( "foo", 1 ), ( "Int", 1 ) ]
+            , testParse (typeValue 1) "List (List Int)" [ ( "List", 2 ), ( "Int", 1 ) ]
+            , testParse (typeValue 1) "List\n (\n List\n Int\n )" [ ( "List", 2 ), ( "Int", 1 ) ]
             ]
         , describe "type expression"
             [ testParse (typeExp 1) "foo -> bar" [ ( "foo", 1 ), ( "bar", 1 ) ]
