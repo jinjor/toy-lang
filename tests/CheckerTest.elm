@@ -10,9 +10,17 @@ import Parser
 suite : Test
 suite =
     describe "Checker"
-        [ describe "eval"
+        [ describe "errors"
             [ testCheck "empty" "" []
+            , testCheck "undefined variable" "a=b" [ "VariableNotDefined" ]
+            , testCheck "duplicated difinition" "a=1\na=1" [ "DifinitionDuplicated" ]
+            , testCheck "duplicated type difinition" "a:Int\na:Int" [ "DifinitionDuplicated" ]
+            , testCheck "unknown type" "a:Unknown" [ "TypeNotDefined" ]
+            , testCheck "too few type arguments" "a:List" [ "TooFewTypeArguments" ]
+            , testCheck "too many type arguments" "a:List Int Int" [ "TooManyTypeArguments" ]
             ]
+          -- , describe "interfaces"
+          --     []
         ]
 
 
@@ -28,6 +36,7 @@ testCheck name code expectedErrors =
 
                         errStr =
                             toString errors
+                                |> Debug.log "errors"
 
                         ok =
                             List.all
