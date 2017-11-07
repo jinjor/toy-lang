@@ -82,6 +82,43 @@ fromTypeExp state t =
                     )
 
 
+validateType : Dict String TypeDef -> Type -> List Error
+validateType typeDefs t =
+    case t of
+        TypeVar a ->
+            []
+
+        TypeValue name args ->
+            let
+                nameErr =
+                    validateTypeConstructor typeDefs name (List.length args)
+                        |> Maybe.map (\eType -> [ ( P.mockRange, eType ) ])
+                        |> Maybe.withDefault []
+            in
+                nameErr ++ List.concatMap (validateType typeDefs) args
+
+        TypeArrow left right ->
+            validateType typeDefs left ++ validateType typeDefs right
+
+        TypeApply _ _ _ ->
+            Debug.crash "maybe a bug"
+
+
+validateTypeConstructor : Dict String TypeDef -> String -> Int -> Maybe ErrorType
+validateTypeConstructor typeDefs name argLength =
+    case Dict.get name typeDefs of
+        Just def ->
+            if argLength > def.arity then
+                Just TooManyTypeArguments
+            else if argLength < def.arity then
+                Just TooFewTypeArguments
+            else
+                Nothing
+
+        Nothing ->
+            Just (TypeNotDefined name)
+
+
 int : Type
 int =
     TypeValue "Int" []

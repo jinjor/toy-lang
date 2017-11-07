@@ -41,12 +41,17 @@ check module_ =
             getTypeExpDict module_.statements
                 |> Typing.fromTypeExpDict n
 
+        typeAnnotationErrors =
+            envTypes
+                |> Dict.values
+                |> List.concatMap (validateType Type.knownTypes)
+
         result =
             checkAllTypes (Dict.toList envFromModule) envTypes
     in
         case result of
             Ok dict ->
-                ( []
+                ( typeAnnotationErrors ++ []
                 , dict
                     |> Dict.toList
                     |> List.map (\( id, t ) -> Interface id t)
@@ -56,7 +61,7 @@ check module_ =
                 )
 
             Err errors ->
-                ( errors, [], [] )
+                ( typeAnnotationErrors ++ errors, [], [] )
 
 
 checkAllTypes :

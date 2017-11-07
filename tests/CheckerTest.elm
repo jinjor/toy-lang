@@ -13,11 +13,14 @@ suite =
         [ describe "errors"
             [ testCheck "empty" "" []
             , testCheck "undefined variable" "a=b" [ "VariableNotDefined" ]
-            , testCheck "duplicated difinition" "a=1\na=1" [ "DifinitionDuplicated" ]
-            , testCheck "duplicated type difinition" "a:Int\na:Int" [ "DifinitionDuplicated" ]
+              -- , testCheck "duplicated difinition" "a=1\na=1" [ "DifinitionDuplicated" ]
+              -- , testCheck "duplicated type difinition" "a:Int\na:Int" [ "DifinitionDuplicated" ]
             , testCheck "unknown type" "a:Unknown" [ "TypeNotDefined" ]
             , testCheck "too few type arguments" "a:List" [ "TooFewTypeArguments" ]
             , testCheck "too many type arguments" "a:List Int Int" [ "TooManyTypeArguments" ]
+              -- , testCheck "multiple errors"
+              --     "a=b\na=c\nb:Unknown\nb:Int"
+              --     [ "VariableNotDefined", "DifinitionDuplicated", "TypeNotDefined" ]
             ]
           -- , describe "interfaces"
           --     []
