@@ -28,6 +28,14 @@ fromTypeExpDict n dict =
     -- TODO error if id is duplicated
     dict
         |> Dict.toList
+        |> fromTypeExpList n
+        |> Tuple.second
+        |> Dict.fromList
+
+
+fromTypeExpList : Int -> List ( String, Pos P.TypeExp ) -> ( Int, List ( String, Type ) )
+fromTypeExpList n list =
+    list
         |> List.foldl
             (\( id, tExp ) ( n, list ) ->
                 fromTypeExp
@@ -36,8 +44,6 @@ fromTypeExpDict n dict =
                     |> (\( t, state ) -> ( state.n, ( id, t ) :: list ))
             )
             ( n, [] )
-        |> Tuple.second
-        |> Dict.fromList
 
 
 fromTypeExp : FromTypeExpState -> P.TypeExp -> ( Type, FromTypeExpState )

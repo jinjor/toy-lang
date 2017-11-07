@@ -46,29 +46,37 @@ check module_ =
                 |> Dict.values
                 |> List.concatMap (validateType Type.knownTypes)
 
-        result =
+        ( typeMatchingErrors, dict ) =
             checkAllTypes (Dict.toList envFromModule) envTypes
     in
-        case result of
-            Ok dict ->
-                ( typeAnnotationErrors ++ []
-                , dict
-                    |> Dict.toList
-                    |> List.map (\( id, t ) -> Interface id t)
-                , expDict
-                    |> Dict.toList
-                    |> List.map (\( id, exp ) -> Implementation id exp)
-                )
-
-            Err errors ->
-                ( typeAnnotationErrors ++ errors, [], [] )
+        ( typeAnnotationErrors ++ typeMatchingErrors
+        , dict
+            |> Dict.toList
+            |> List.map (\( id, t ) -> Interface id t)
+        , expDict
+            |> Dict.toList
+            |> List.map (\( id, exp ) -> Implementation id exp)
+        )
 
 
 checkAllTypes :
     List ( String, ( Type, Dependency ) )
     -> Dict String Type
-    -> Result (List Error) (Dict String Type)
+    -> ( List Error, Dict String Type )
 checkAllTypes expList envTypes =
+    case checkAllTypesHelp expList envTypes of
+        Ok dict ->
+            ( [], dict )
+
+        Err errors ->
+            ( errors, Dict.empty )
+
+
+checkAllTypesHelp :
+    List ( String, ( Type, Dependency ) )
+    -> Dict String Type
+    -> Result (List Error) (Dict String Type)
+checkAllTypesHelp expList envTypes =
     case expList of
         [] ->
             Ok envTypes
@@ -80,7 +88,7 @@ checkAllTypes expList envTypes =
                         |> Result.mapError List.singleton
                         |> Result.andThen
                             (\( t, env ) ->
-                                checkAllTypes tail (Dict.insert id t envTypes)
+                                checkAllTypesHelp tail (Dict.insert id t envTypes)
                             )
 
                 ( errors, _ ) ->
