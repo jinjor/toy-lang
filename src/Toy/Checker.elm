@@ -6,6 +6,7 @@ import Toy.Typing as Typing exposing (..)
 import Toy.Type as Type exposing (..)
 import Toy.Error exposing (..)
 import Dict exposing (Dict)
+import Dict.Extra as DictX
 
 
 type alias Interface =
@@ -17,6 +18,16 @@ type alias Interface =
 type alias Implementation =
     { id : String
     , exp : Pos Expression
+    }
+
+
+type alias Defs =
+    Dict String DefsForId
+
+
+type alias DefsForId =
+    { annotations : List Type
+    , expressions : List ( Type, Dependency )
     }
 
 
@@ -37,6 +48,7 @@ check module_ =
                     )
                     ( 0, Dict.empty )
 
+        envTypes : Dict String Type
         envTypes =
             getTypeExpDict module_.statements
                 |> Typing.fromTypeExpDict n
@@ -144,3 +156,60 @@ getTypeExpDict statements =
                         dict
             )
             Dict.empty
+
+
+collectDefs : List (Pos Statement) -> Defs
+collectDefs statements =
+    statements
+        |> DictX.groupBy idOf
+        |> Dict.foldl
+            (\id statements ( n, dict ) ->
+                let
+                    ( n1, defsForId ) =
+                        collectDefsForEachId n statements
+                in
+                    ( n1, Dict.insert id defsForId dict )
+            )
+            ( 0, Dict.empty )
+        |> Tuple.second
+
+
+collectDefsForEachId : Int -> List (Pos Statement) -> ( Int, DefsForId )
+collectDefsForEachId n statements =
+    statements
+        |> List.foldl
+            (\statement ( n, defsForId ) ->
+                case statement.content of
+                    Assignment id exp ->
+                        let
+                            ( t, n1, dep ) =
+                                Typing.fromExp n Dict.empty exp
+                        in
+                            ( n1
+                            , { defsForId
+                                | expressions = defsForId.expressions ++ [ ( t, dep ) ]
+                              }
+                            )
+
+                    TypeSignature id exp ->
+                        let
+                            ( t, state ) =
+                                Typing.fromTypeExp (Typing.initFromTypeExpState n) exp.content
+                        in
+                            ( state.n
+                            , { defsForId
+                                | annotations = defsForId.annotations ++ [ t ]
+                              }
+                            )
+            )
+            ( n, DefsForId [] [] )
+
+
+idOf : Pos Statement -> String
+idOf statement =
+    case statement.content of
+        Assignment id _ ->
+            id.content
+
+        TypeSignature id _ ->
+            id
