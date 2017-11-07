@@ -27,41 +27,20 @@ type alias Defs =
 
 type alias DefsForId =
     { annotations : List Type
-    , expressions : List ( Type, Dependency )
+    , expressions : List ( Expression, Type, Dependency )
     }
 
 
 check : Module -> ( List Error, List Interface, List Implementation )
 check module_ =
     let
-        ( todo_handle_errors, expDict ) =
-            getExpDict module_.statements
+        defs =
+            collectDefs module_.statements
 
-        ( n, envFromModule ) =
-            expDict
-                |> Dict.foldl
-                    (\id exp ( n, dict ) ->
-                        Typing.fromExp n Dict.empty exp
-                            |> (\( t, n, dep ) ->
-                                    ( n, Dict.insert id ( t, dep ) dict )
-                               )
-                    )
-                    ( 0, Dict.empty )
-
-        envTypes : Dict String Type
-        envTypes =
-            getTypeExpDict module_.statements
-                |> Typing.fromTypeExpDict n
-
-        typeAnnotationErrors =
-            envTypes
-                |> Dict.values
-                |> List.concatMap (validateType Type.knownTypes)
-
-        ( typeMatchingErrors, dict ) =
-            checkAllTypes (Dict.toList envFromModule) envTypes
+        ( errors, dict, expDict ) =
+            checkAllTypes def
     in
-        ( typeAnnotationErrors ++ typeMatchingErrors
+        ( errors
         , dict
             |> Dict.toList
             |> List.map (\( id, t ) -> Interface id t)
@@ -71,91 +50,103 @@ check module_ =
         )
 
 
-checkAllTypes :
-    List ( String, ( Type, Dependency ) )
-    -> Dict String Type
-    -> ( List Error, Dict String Type )
-checkAllTypes expList envTypes =
-    case checkAllTypesHelp expList envTypes of
-        Ok dict ->
-            ( [], dict )
-
-        Err errors ->
-            ( errors, Dict.empty )
+checkAllTypes : Defs -> ( List Error, Dict String Type, Dict String Expression )
+checkAllTypes defs =
+    Dict.foldl checkForEachId ( [], Dict.empty, Dict.empty ) defs
 
 
-checkAllTypesHelp :
-    List ( String, ( Type, Dependency ) )
-    -> Dict String Type
-    -> Result (List Error) (Dict String Type)
-checkAllTypesHelp expList envTypes =
-    case expList of
+checkForEachId :
+    String
+    -> DefsForId
+    -> ( List Error, Dict String Type, Dict String Expression )
+    -> ( List Error, Dict String Type, Dict String Expression )
+checkForEachId id defsForId ( errors, envTypes, expDict ) =
+    case List.map (validateType Type.knownTypes) defsForId.annotations of
         [] ->
-            Ok envTypes
+            let
+                ( inferenceErrors, inferedTypes ) =
+                    evalExpressionsForId defs defsForId.expressions
+            in
+                case inferredTypes of
+                    _ :: _ :: _ ->
+                        ( Pos mockRange (DifinitionDuplicated id) :: inferenceErrors ++ errors
+                        , envTypes
+                        , expDict
+                        )
 
-        ( id, ( t, dep ) ) :: tail ->
-            case resolveDependencies envTypes dep of
-                ( [], env ) ->
-                    evaluate env t
-                        |> Result.mapError List.singleton
-                        |> Result.andThen
-                            (\( t, env ) ->
-                                checkAllTypesHelp tail (Dict.insert id t envTypes)
-                            )
+                    ( exp, t ) :: [] ->
+                        ( inferenceErrors ++ errors
+                        , Dict.insert id t envTypes
+                        , Dict.insert id exp expDict
+                        )
 
-                ( errors, _ ) ->
-                    Err errors
+                    [] ->
+                        ( inferenceErrors ++ errors
+                        , envTypes
+                        , expDict
+                        )
+
+        [ t ] ->
+            Debug.crash "skip for now"
+
+        ts ->
+            ( Pos mockRange (DifinitionDuplicated id) :: errors
+            , envTypes
+            , expDict
+            )
 
 
-resolveDependencies : Dict String Type -> Dependency -> ( List Error, Env )
-resolveDependencies envTypes dep =
+evalExpressionsForId : Defs -> List ( Type, Dependency ) -> ( List Error, List ( Expression, Type ) )
+evalExpressionsForId defs expressions =
+    expressions
+        |> List.map (\( exp, t, dep ) -> ( exp, evalOneExpression defs t dep ))
+        |> List.foldl
+            (\( exp, result ) ( inferenceErrors, inferedTypes ) ->
+                case result of
+                    Ok t ->
+                        ( inferenceErrors, ( exp, t ) :: inferedTypes )
+
+                    Err errs ->
+                        ( errs ++ inferenceErrors, inferedTypes )
+            )
+            ( [], [] )
+
+
+evalOneExpression : Defs -> Type -> Dependency -> Result (List Error) Type
+evalOneExpression defs t dep =
+    case resolveDependencies defs dep of
+        ( True, [], env ) ->
+            case evaluate env t of
+                Ok ( t, env ) ->
+                    Ok t
+
+                Err e ->
+                    Err [ e ]
+
+        ( False, depErrors, _ ) ->
+            Err depErrors
+
+
+resolveDependencies : Defs -> Dependency -> ( Bool, List Error, Env )
+resolveDependencies defs dep =
     dep
         |> Dict.toList
         |> List.foldl
-            (\( name, ( range, id ) ) ( errors, env ) ->
-                case Dict.get name envTypes of
-                    Just t ->
-                        ( errors, Dict.insert id t env )
+            (\( name, ( range, id ) ) ( ok, errors, env ) ->
+                case Dict.get name defs of
+                    Just [] ->
+                        Debug.log "impossible"
+
+                    Just [ t ] ->
+                        ( ok, errors, Dict.insert id t env )
+
+                    Just ts ->
+                        ( False, errors, env )
 
                     Nothing ->
-                        ( ( range, VariableNotDefined name ) :: errors, env )
+                        ( False, ( range, VariableNotDefined name ) :: errors, env )
             )
-            ( [], Dict.empty )
-
-
-getExpDict : List (Pos Statement) -> ( List Error, Dict String (Pos Expression) )
-getExpDict statements =
-    statements
-        |> List.foldl
-            (\statement ( errors, dict ) ->
-                case statement.content of
-                    Assignment id exp ->
-                        case Dict.get id.content dict of
-                            Just _ ->
-                                ( ( id.range, DifinitionDuplicated id.content ) :: errors, dict )
-
-                            Nothing ->
-                                ( errors, Dict.insert id.content exp dict )
-
-                    _ ->
-                        ( errors, dict )
-            )
-            ( [], Dict.empty )
-
-
-getTypeExpDict : List (Pos Statement) -> Dict String (Pos TypeExp)
-getTypeExpDict statements =
-    statements
-        |> List.foldl
-            (\statement dict ->
-                case statement.content of
-                    TypeSignature id exp ->
-                        Dict.insert id exp dict
-
-                    _ ->
-                        dict
-            )
-            Dict.empty
+            ( True, [], Dict.empty )
 
 
 collectDefs : List (Pos Statement) -> Defs
@@ -164,11 +155,11 @@ collectDefs statements =
         |> DictX.groupBy idOf
         |> Dict.foldl
             (\id statements ( n, dict ) ->
-                let
-                    ( n1, defsForId ) =
-                        collectDefsForEachId n statements
-                in
-                    ( n1, Dict.insert id defsForId dict )
+                collectDefsForEachId n statements
+                    |> Tuple.mapSecond
+                        (\defsForId ->
+                            Dict.insert id defsForId dict
+                        )
             )
             ( 0, Dict.empty )
         |> Tuple.second
@@ -176,33 +167,33 @@ collectDefs statements =
 
 collectDefsForEachId : Int -> List (Pos Statement) -> ( Int, DefsForId )
 collectDefsForEachId n statements =
-    statements
-        |> List.foldl
-            (\statement ( n, defsForId ) ->
-                case statement.content of
-                    Assignment id exp ->
-                        let
-                            ( t, n1, dep ) =
-                                Typing.fromExp n Dict.empty exp
-                        in
-                            ( n1
-                            , { defsForId
-                                | expressions = defsForId.expressions ++ [ ( t, dep ) ]
-                              }
-                            )
+    List.foldl updateDefsForIdByStatement ( n, DefsForId [] [] ) statements
 
-                    TypeSignature id exp ->
-                        let
-                            ( t, state ) =
-                                Typing.fromTypeExp (Typing.initFromTypeExpState n) exp.content
-                        in
-                            ( state.n
-                            , { defsForId
-                                | annotations = defsForId.annotations ++ [ t ]
-                              }
-                            )
-            )
-            ( n, DefsForId [] [] )
+
+updateDefsForIdByStatement : Statement -> ( Int, DefsForId ) -> ( Int, DefsForId )
+updateDefsForIdByStatement statement ( n, defsForId ) =
+    case statement.content of
+        Assignment id exp ->
+            let
+                ( t, n1, dep ) =
+                    Typing.fromExp n Dict.empty exp
+            in
+                ( n1
+                , { defsForId
+                    | expressions = defsForId.expressions ++ [ ( exp, t, dep ) ]
+                  }
+                )
+
+        TypeSignature id exp ->
+            let
+                ( t, state ) =
+                    Typing.fromTypeExp (Typing.initFromTypeExpState n) exp.content
+            in
+                ( state.n
+                , { defsForId
+                    | annotations = defsForId.annotations ++ [ t ]
+                  }
+                )
 
 
 idOf : Pos Statement -> String
