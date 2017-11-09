@@ -54,7 +54,7 @@ suite =
             , testMatch "Dict a a" "Dict Int String" (Err "Mismatch")
             , testMatch "Int -> String" "Int -> String" (Ok 0)
             , testMatch "Int -> String" "Int" (Err "Few")
-              -- , testMatch "Int -> String" "Int -> String -> Bool" (Err "Many")
+            , testMatch "Int -> String" "Int -> String -> Bool" (Err "Mismatch")
             , testMatch "Int" "Int -> String" (Err "Mismatch")
             , testMatch "a" "Int -> String" (Ok 1)
             , testMatch "Int -> a" "Int -> String -> Bool" (Ok 1)
@@ -65,12 +65,13 @@ suite =
         , describe "eval"
             [ testEval "a" [ "a" => "Int" ] (Ok "Int")
             , testEval "f" [ "f" => "Int -> String" ] (Ok "(Int -> String)")
-            , testEval "a 1" [ "a" => "Int" ] (Err "Argument")
             , testEval "a 1" [ "a" => "Int -> String" ] (Ok "String")
             , testEval "a 1" [ "a" => "Int -> String -> Bool" ] (Ok "(String -> Bool)")
             , testEval "a 1" [ "a" => "String -> Int" ] (Err "Mismatch")
             , testEval "a 1" [ "a" => "a -> a" ] (Ok "Int")
             , testEval "a 1" [ "a" => "a -> a -> a" ] (Ok "(Int -> Int)")
+            , testEval "a 1" [ "a" => "Int" ] (Err "Many")
+            , testEval "a 1" [ "a" => "a" ] (Err "Many")
             , testEval "a (\\a -> a)" [ "a" => "Int" ] (Err "Many")
             , testEval "a (\\a -> a)" [ "a" => "Int -> String" ] (Err "Mismatch")
             , testEval "a (\\a -> a)" [ "a" => "a -> String" ] (Ok "String")
@@ -88,6 +89,7 @@ suite =
             , testEval "f a" [ "f" => "a -> a", "a" => "Int -> String" ] (Ok "(Int -> String)")
             , testEval "f a 1" [ "f" => "a -> a", "a" => "Int -> String" ] (Ok "String")
             , testEval "f (a 1) (a \"\")" [ "a" => "a -> a", "f" => "b -> c -> b -> c" ] (Ok "(Int -> String)")
+            , testEval "(\\a -> a 1)" [] (Ok "((a -> Int) -> Int)")
             , testEval "(\\a -> \"\") 1" [] (Ok "String")
             , testEval "(\\a -> a) 1" [] (Ok "Int")
             , testEval "(\\a -> a) 1" [ "a" => "String" ] (Ok "Int")
@@ -249,7 +251,7 @@ testEval s envSource_ expected =
                                                 Expect.equal expected (formatType t)
 
                                             _ ->
-                                                Expect.fail "unexpectedy failed"
+                                                Expect.fail ("unexpectedy succeeded " ++ Formatter.formatType t)
 
                                 Err ( range, e ) ->
                                     ()
@@ -259,7 +261,7 @@ testEval s envSource_ expected =
                                             (toString e ++ " at " ++ Formatter.formatRange range)
                                         /> case expected of
                                             Ok _ ->
-                                                Expect.fail "unexpectedy failed"
+                                                Expect.fail ("unexpectedy failed " ++ toString expected)
 
                                             Err expected ->
                                                 toString e
