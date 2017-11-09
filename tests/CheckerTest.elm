@@ -18,6 +18,7 @@ suite =
             , testCheck "unknown type" "a:Unknown" [ "TypeNotDefined" ]
             , testCheck "too few type arguments" "a:List" [ "TooFewTypeArguments" ]
             , testCheck "too many type arguments" "a:List Int Int" [ "TooManyTypeArguments" ]
+            , testCheck "type annotation mismatch" "a:String\na=1" [ "Mismatch" ]
               -- , testCheck "multiple errors"
               --     "a=b\na=c\nb:Unknown\nb:Int"
               --     [ "VariableNotDefined", "DifinitionDuplicated", "TypeNotDefined" ]

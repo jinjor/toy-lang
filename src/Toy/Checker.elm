@@ -107,10 +107,18 @@ checkForEachId id defsForId ( errors, envTypes, expDict ) =
                                 )
 
                             ( exp, t ) :: [] ->
-                                ( inferenceErrors ++ errors
-                                , newEnvTypes
-                                , Dict.insert id exp expDict
-                                )
+                                case match Dict.empty t annotation of
+                                    Ok _ ->
+                                        ( inferenceErrors ++ errors
+                                        , newEnvTypes
+                                        , Dict.insert id exp expDict
+                                        )
+
+                                    Err e ->
+                                        ( ( Toy.Parser.mockRange, e ) :: inferenceErrors ++ errors
+                                        , newEnvTypes
+                                        , Dict.insert id exp expDict
+                                        )
 
                             [] ->
                                 ( inferenceErrors ++ errors
